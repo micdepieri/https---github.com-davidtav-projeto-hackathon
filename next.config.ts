@@ -28,7 +28,18 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'earthengine.googleapis.com',
+        port: '',
+        pathname: '/**',
+      }
     ],
+  },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '4.5mb',
+    },
   },
 };
 

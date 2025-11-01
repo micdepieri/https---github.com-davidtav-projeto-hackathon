@@ -35,11 +35,11 @@ export type GetUrbanHeatIslandDataOutput = z.infer<typeof GetUrbanHeatIslandData
 
 async function initializeEE() {
     console.log("Attempting to initialize Earth Engine...");
-    const privateKey = process.env.EE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-    const clientEmail = process.env.EE_CLIENT_EMAIL;
+    const privateKey = process.env.NEXT_PUBLIC_EE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+    const clientEmail = process.env.NEXT_PUBLIC_EE_CLIENT_EMAIL;
     
     if (!privateKey || !clientEmail) {
-        throw new Error("EE_PRIVATE_KEY or EE_CLIENT_EMAIL environment variables are not set.");
+        throw new Error("NEXT_PUBLIC_EE_PRIVATE_KEY or NEXT_PUBLIC_EE_CLIENT_EMAIL environment variables are not set.");
     }
 
     const auth = new google.auth.JWT({
@@ -57,13 +57,13 @@ async function initializeEE() {
                 return reject(new Error('Failed to authorize with Google Earth Engine.'));
             }
             console.log("Authorization successful. Initializing Earth Engine API...");
-            ee.initialize(null, null, () => {
+            ee.initialize(auth, null, () => {
                 console.log("Earth Engine API initialized successfully.");
                 resolve();
             }, (err: any) => {
                  console.error('Earth Engine initialization error:', err);
                  reject(new Error(`Failed to initialize Earth Engine API: ${err}`));
-            }, null, auth);
+            });
         });
     });
 }
