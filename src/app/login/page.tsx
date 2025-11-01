@@ -72,7 +72,7 @@ export default function LoginPage() {
         photoURL: user.photoURL,
         createdAt: serverTimestamp(),
         lastLogin: serverTimestamp(),
-        roles: ['user'],
+        roles: ['admin'],
         cities: [],
       }, { merge: true });
       toast({ title: "Bem-vindo!", description: "Sua conta foi criada." });
@@ -210,5 +210,7 @@ export default function LoginPage() {
     </main>
   );
 }
+
+    
 
     
