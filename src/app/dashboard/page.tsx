@@ -18,11 +18,11 @@ import { Loader2, Upload } from 'lucide-react';
 import MapPlaceholder from '@/components/map-placeholder';
 
 const formSchema = z.object({
-  municipalityDescription: z.string().min(10, "Please provide a more detailed description."),
-  ndviData: typeof window === 'undefined' ? z.any() : z.instanceof(FileList).refine(files => files.length > 0, "NDVI data file is required."),
-  lstData: typeof window === 'undefined' ? z.any() : z.instanceof(FileList).refine(files => files.length > 0, "LST data file is required."),
-  populationDensityData: typeof window === 'undefined' ? z.any() : z.instanceof(FileList).refine(files => files.length > 0, "Population density data is required."),
-  infrastructureData: typeof window === 'undefined' ? z.any() : z.instanceof(FileList).refine(files => files.length > 0, "Infrastructure data is required."),
+  municipalityDescription: z.string().min(10, "Por favor, forneça uma descrição mais detalhada."),
+  ndviData: typeof window === 'undefined' ? z.any() : z.instanceof(FileList).refine(files => files.length > 0, "O arquivo de dados NDVI é obrigatório."),
+  lstData: typeof window === 'undefined' ? z.any() : z.instanceof(FileList).refine(files => files.length > 0, "O arquivo de dados LST é obrigatório."),
+  populationDensityData: typeof window === 'undefined' ? z.any() : z.instanceof(FileList).refine(files => files.length > 0, "O arquivo de dados de densidade populacional é obrigatório."),
+  infrastructureData: typeof window === 'undefined' ? z.any() : z.instanceof(FileList).refine(files => files.length > 0, "O arquivo de dados de infraestrutura é obrigatório."),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -66,12 +66,12 @@ export default function DiagnosticsPage() {
 
         if (response.success && response.data) {
             setResults(response.data);
-            toast({ title: "Diagnostics Complete", description: "Analysis finished successfully." });
+            toast({ title: "Diagnóstico Concluído", description: "A análise foi finalizada com sucesso." });
         } else {
             toast({
                 variant: "destructive",
-                title: "An Error Occurred",
-                description: response.error || "Failed to run diagnostics.",
+                title: "Ocorreu um Erro",
+                description: response.error || "Falha ao executar o diagnóstico.",
             });
         }
         setIsLoading(false);
@@ -82,24 +82,24 @@ export default function DiagnosticsPage() {
             <div className="grid auto-rows-max items-start gap-4 md:gap-8 lg:col-span-1">
                 <Card>
                     <CardHeader>
-                        <CardTitle>Automated Diagnostics</CardTitle>
-                        <CardDescription>Upload geospatial data to identify urban heat islands and priority zones for green intervention.</CardDescription>
+                        <CardTitle>Diagnóstico Automatizado</CardTitle>
+                        <CardDescription>Carregue dados geoespaciais para identificar ilhas de calor urbanas e zonas prioritárias para intervenção verde.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-6">
                             <div className="grid gap-2">
-                                <Label htmlFor="municipalityDescription">Municipality Description</Label>
-                                <Textarea id="municipalityDescription" {...form.register('municipalityDescription')} placeholder="e.g., Juquitiba/SP, a small city with surrounding Atlantic Forest..." />
+                                <Label htmlFor="municipalityDescription">Descrição do Município</Label>
+                                <Textarea id="municipalityDescription" {...form.register('municipalityDescription')} placeholder="Ex: Juquitiba/SP, uma cidade pequena com Mata Atlântica no entorno..." />
                                 {form.formState.errors.municipalityDescription && <p className="text-sm text-destructive">{form.formState.errors.municipalityDescription.message}</p>}
                             </div>
-                            <FileInput label="Vegetation Cover (NDVI)" name="ndviData" register={form.register} errors={form.formState.errors} />
-                            <FileInput label="Land Surface Temp. (LST)" name="lstData" register={form.register} errors={form.formState.errors} />
-                            <FileInput label="Population Density" name="populationDensityData" register={form.register} errors={form.formState.errors} />
-                            <FileInput label="Critical Infrastructure" name="infrastructureData" register={form.register} errors={form.formState.errors} />
+                            <FileInput label="Cobertura Vegetal (NDVI)" name="ndviData" register={form.register} errors={form.formState.errors} />
+                            <FileInput label="Temperatura da Sup. (LST)" name="lstData" register={form.register} errors={form.formState.errors} />
+                            <FileInput label="Densidade Populacional" name="populationDensityData" register={form.register} errors={form.formState.errors} />
+                            <FileInput label="Infraestrutura Crítica" name="infrastructureData" register={form.register} errors={form.formState.errors} />
                             
                             <Button type="submit" disabled={isLoading}>
                                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                {isLoading ? "Analyzing..." : "Run Diagnostics"}
+                                {isLoading ? "Analisando..." : "Executar Diagnóstico"}
                             </Button>
                         </form>
                     </CardContent>
@@ -110,7 +110,7 @@ export default function DiagnosticsPage() {
                     <Card className="flex items-center justify-center p-8 min-h-[400px]">
                         <div className="flex flex-col items-center gap-4">
                             <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                            <p className="text-muted-foreground">Analyzing geospatial data... This may take a moment.</p>
+                            <p className="text-muted-foreground">Analisando dados geoespaciais... Isso pode levar um momento.</p>
                         </div>
                     </Card>
                 )}
@@ -118,7 +118,7 @@ export default function DiagnosticsPage() {
                     <div className="grid gap-4">
                         <Card>
                             <CardHeader>
-                                <CardTitle>Diagnostics Summary</CardTitle>
+                                <CardTitle>Resumo do Diagnóstico</CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <p>{results.summary}</p>
@@ -126,17 +126,17 @@ export default function DiagnosticsPage() {
                         </Card>
                         <Card>
                             <CardHeader>
-                                <CardTitle>Priority Zones</CardTitle>
-                                <CardDescription>Top locations where green intervention is most needed.</CardDescription>
+                                <CardTitle>Zonas Prioritárias</CardTitle>
+                                <CardDescription>Principais locais onde a intervenção verde é mais necessária.</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <MapPlaceholder />
                                 <Table className="mt-4">
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>Location</TableHead>
-                                            <TableHead>Heat Risk</TableHead>
-                                            <TableHead>Social Vulnerability</TableHead>
+                                            <TableHead>Local</TableHead>
+                                            <TableHead>Risco de Calor</TableHead>
+                                            <TableHead>Vulnerabilidade Social</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -153,7 +153,7 @@ export default function DiagnosticsPage() {
                         </Card>
                         <Card>
                             <CardHeader>
-                                <CardTitle>Suggested Actions</CardTitle>
+                                <CardTitle>Ações Sugeridas</CardTitle>
                             </CardHeader>
                             <CardContent>
                                <p className="whitespace-pre-wrap">{results.suggestedActions}</p>
@@ -163,7 +163,7 @@ export default function DiagnosticsPage() {
                 ) : !isLoading && (
                     <Card className="flex items-center justify-center p-8 min-h-[400px]">
                         <div className="text-center text-muted-foreground">
-                            <p>Your analysis results will appear here.</p>
+                            <p>Os resultados da sua análise aparecerão aqui.</p>
                         </div>
                     </Card>
                 )}

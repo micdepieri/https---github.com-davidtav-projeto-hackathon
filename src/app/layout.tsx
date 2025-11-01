@@ -6,8 +6,8 @@ import { cn } from '@/lib/utils';
 import { FirebaseProvider } from '@/firebase';
 
 export const metadata: Metadata = {
-  title: 'Cool Cities Climate Planner',
-  description: 'Intelligent Assistant for Climate-Positive Urban Planning',
+  title: 'Cool Cities - Planejador Climático',
+  description: 'Assistente Inteligente para Planejamento Urbano Clima-Positivo',
 };
 
 export default function RootLayout({
@@ -16,7 +16,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="pt-BR" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link

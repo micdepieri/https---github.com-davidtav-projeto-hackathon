@@ -13,10 +13,10 @@ import {
 } from '@/components/ui/sidebar';
 
 const menuItems = [
-  { href: '/dashboard', label: 'Diagnostics', icon: LayoutDashboard },
-  { href: '/dashboard/recommendations', label: 'Recommendations', icon: Map },
-  { href: '/dashboard/plan-generator', label: 'Plan Generator', icon: FileText },
-  { href: '/dashboard/assistant', label: 'AI Assistant', icon: Bot },
+  { href: '/dashboard', label: 'Diagnóstico', icon: LayoutDashboard },
+  { href: '/dashboard/recommendations', label: 'Recomendações', icon: Map },
+  { href: '/dashboard/plan-generator', label: 'Gerador de Planos', icon: FileText },
+  { href: '/dashboard/assistant', label: 'Assistente IA', icon: Bot },
 ];
 
 export function SidebarNav() {
@@ -51,10 +51,10 @@ export function SidebarNav() {
       <SidebarFooter>
          <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip="Settings">
+            <SidebarMenuButton asChild tooltip="Configurações">
               <Link href="#">
                 <Settings />
-                <span>Settings</span>
+                <span>Configurações</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

@@ -28,19 +28,19 @@ async function fileToDataURI(file: File): Promise<string> {
 const diagnoseSchema = z.object({
   municipalityDescription: z
     .string()
-    .min(1, 'Municipality description is required.'),
+    .min(1, 'A descrição do município é obrigatória.'),
   ndviData: z
     .instanceof(File)
-    .refine((file) => file.size > 0, 'NDVI data is required.'),
+    .refine((file) => file.size > 0, 'O arquivo de dados NDVI é obrigatório.'),
   lstData: z
     .instanceof(File)
-    .refine((file) => file.size > 0, 'LST data is required.'),
+    .refine((file) => file.size > 0, 'O arquivo de dados LST é obrigatório.'),
   populationDensityData: z
     .instanceof(File)
-    .refine((file) => file.size > 0, 'Population density data is required.'),
+    .refine((file) => file.size > 0, 'O arquivo de dados de densidade populacional é obrigatório.'),
   infrastructureData: z
     .instanceof(File)
-    .refine((file) => file.size > 0, 'Infrastructure data is required.'),
+    .refine((file) => file.size > 0, 'O arquivo de dados de infraestrutura é obrigatório.'),
 });
 
 export async function runDiagnostics(
@@ -80,7 +80,7 @@ export async function runDiagnostics(
     return { success: true, data: result };
   } catch (error) {
     console.error(error);
-    return { success: false, error: 'An error occurred during diagnostics.' };
+    return { success: false, error: 'Ocorreu um erro durante o diagnóstico.' };
   }
 }
 
@@ -96,7 +96,7 @@ export async function runRecommendations(
     return { success: true, data: result };
   } catch (e) {
     console.error(e);
-    return { success: false, error: 'Failed to generate recommendations' };
+    return { success: false, error: 'Falha ao gerar recomendações' };
   }
 }
 
@@ -112,6 +112,6 @@ export async function runPlanGeneration(
     return { success: true, data: result };
   } catch (e) {
     console.error(e);
-    return { success: false, error: 'Failed to generate plan' };
+    return { success: false, error: 'Falha ao gerar o plano' };
   }
 }

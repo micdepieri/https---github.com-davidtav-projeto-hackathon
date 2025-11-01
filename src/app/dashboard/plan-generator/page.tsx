@@ -16,9 +16,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Download } from 'lucide-react';
 
 const formSchema = z.object({
-  municipalityName: z.string().min(3, "Municipality name is required."),
-  problemDescription: z.string().min(10, "Please provide a more detailed problem description."),
-  suggestedAreas: z.string().min(10, "Please suggest some areas for intervention."),
+  municipalityName: z.string().min(3, "O nome do município é obrigatório."),
+  problemDescription: z.string().min(10, "Por favor, forneça uma descrição mais detalhada do problema."),
+  suggestedAreas: z.string().min(10, "Por favor, sugira algumas áreas para intervenção."),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -45,12 +45,12 @@ export default function PlanGeneratorPage() {
 
         if (response.success && response.data) {
             setResults(response.data);
-            toast({ title: "Climate Plan Generated", description: "Your climate plan and supporting documents are ready." });
+            toast({ title: "Plano Climático Gerado", description: "Seu plano climático e documentos de apoio estão prontos." });
         } else {
             toast({
                 variant: "destructive",
-                title: "An Error Occurred",
-                description: response.error || "Failed to generate plan.",
+                title: "Ocorreu um Erro",
+                description: response.error || "Falha ao gerar o plano.",
             });
         }
         setIsLoading(false);
@@ -61,30 +61,30 @@ export default function PlanGeneratorPage() {
             <div className="grid auto-rows-max items-start gap-4 md:gap-8 lg:col-span-1">
                 <Card>
                     <CardHeader>
-                        <CardTitle>Climate Plan Generator</CardTitle>
-                        <CardDescription>Automatically generate a draft climate plan and supporting documentation for your municipality.</CardDescription>
+                        <CardTitle>Gerador de Plano Climático</CardTitle>
+                        <CardDescription>Gere automaticamente um rascunho de plano climático e documentação de apoio para seu município.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-6">
                             <div className="grid gap-2">
-                                <Label htmlFor="municipalityName">Municipality Name</Label>
-                                <Input id="municipalityName" {...form.register('municipalityName')} placeholder="e.g., Juquitiba/SP" />
+                                <Label htmlFor="municipalityName">Nome do Município</Label>
+                                <Input id="municipalityName" {...form.register('municipalityName')} placeholder="Ex: Juquitiba/SP" />
                                 {form.formState.errors.municipalityName && <p className="text-sm text-destructive">{form.formState.errors.municipalityName.message}</p>}
                             </div>
                             <div className="grid gap-2">
-                                <Label htmlFor="problemDescription">Problem Description</Label>
-                                <Textarea id="problemDescription" {...form.register('problemDescription')} placeholder="e.g., High concentration of heat islands in central neighborhoods, lack of green cover..." />
+                                <Label htmlFor="problemDescription">Descrição do Problema</Label>
+                                <Textarea id="problemDescription" {...form.register('problemDescription')} placeholder="Ex: Alta concentração de ilhas de calor nos bairros centrais, falta de cobertura verde..." />
                                 {form.formState.errors.problemDescription && <p className="text-sm text-destructive">{form.formState.errors.problemDescription.message}</p>}
                             </div>
                             <div className="grid gap-2">
-                                <Label htmlFor="suggestedAreas">Suggested Intervention Areas</Label>
-                                <Textarea id="suggestedAreas" {...form.register('suggestedAreas')} placeholder="e.g., Jardim Aurora, Vila São Roque, areas around the municipal school..." />
+                                <Label htmlFor="suggestedAreas">Áreas de Intervenção Sugeridas</Label>
+                                <Textarea id="suggestedAreas" {...form.register('suggestedAreas')} placeholder="Ex: Jardim Aurora, Vila São Roque, áreas ao redor da escola municipal..." />
                                 {form.formState.errors.suggestedAreas && <p className="text-sm text-destructive">{form.formState.errors.suggestedAreas.message}</p>}
                             </div>
                             
                             <Button type="submit" disabled={isLoading}>
                                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                {isLoading ? "Generating..." : "Generate Climate Plan"}
+                                {isLoading ? "Gerando..." : "Gerar Plano Climático"}
                             </Button>
                         </form>
                     </CardContent>
@@ -95,7 +95,7 @@ export default function PlanGeneratorPage() {
                     <Card className="flex items-center justify-center p-8 min-h-[400px]">
                         <div className="flex flex-col items-center gap-4">
                             <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                            <p className="text-muted-foreground">Drafting climate plan and documents...</p>
+                            <p className="text-muted-foreground">Elaborando plano climático e documentos...</p>
                         </div>
                     </Card>
                 )}
@@ -103,8 +103,8 @@ export default function PlanGeneratorPage() {
                     <div className="grid gap-4">
                         <Card>
                             <CardHeader className="flex flex-row items-center justify-between">
-                                <CardTitle>Generated Climate Plan</CardTitle>
-                                <Button size="sm" variant="outline"><Download className="mr-2 h-4 w-4" /> Download</Button>
+                                <CardTitle>Plano Climático Gerado</CardTitle>
+                                <Button size="sm" variant="outline"><Download className="mr-2 h-4 w-4" /> Baixar</Button>
                             </CardHeader>
                             <CardContent>
                                 <div className="max-w-none">
@@ -114,8 +114,8 @@ export default function PlanGeneratorPage() {
                         </Card>
                         <Card>
                             <CardHeader className="flex flex-row items-center justify-between">
-                                <CardTitle>Supporting Documentation</CardTitle>
-                                <Button size="sm" variant="outline"><Download className="mr-2 h-4 w-4" /> Download</Button>
+                                <CardTitle>Documentação de Apoio</CardTitle>
+                                <Button size="sm" variant="outline"><Download className="mr-2 h-4 w-4" /> Baixar</Button>
                             </CardHeader>
                             <CardContent>
                                 <div className="max-w-none">
@@ -127,7 +127,7 @@ export default function PlanGeneratorPage() {
                 ) : !isLoading && (
                     <Card className="flex items-center justify-center p-8 min-h-[400px]">
                         <div className="text-center text-muted-foreground">
-                            <p>Your generated climate plan will appear here.</p>
+                            <p>Seu plano climático gerado aparecerá aqui.</p>
                         </div>
                     </Card>
                 )}

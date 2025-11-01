@@ -16,9 +16,9 @@ type Message = {
 };
 
 const suggestedQuestions = [
-    "Which neighborhoods need more trees?",
-    "Generate a planting plan for a sunny area.",
-    "Draft a climate plan for my city.",
+    "Quais bairros precisam de mais árvores?",
+    "Gerar um plano de plantio para uma área ensolarada.",
+    "Elaborar um plano climático para minha cidade.",
 ];
 
 export default function AssistantPage() {
@@ -35,7 +35,7 @@ export default function AssistantPage() {
     }, [messages]);
 
     useEffect(() => {
-        setMessages([{ id: '0', role: 'assistant', content: "Hello! I'm your climate planning assistant. How can I help you? You can ask me a question or try one of the suggestions below." }]);
+        setMessages([{ id: '0', role: 'assistant', content: "Olá! Sou seu assistente de planejamento climático. Como posso ajudar? Você pode me fazer uma pergunta ou tentar uma das sugestões abaixo." }]);
     }, []);
 
     const handleSendMessage = async (messageContent: string) => {
@@ -50,14 +50,14 @@ export default function AssistantPage() {
         // It guides the user to the correct tool rather than executing the flow directly.
         setTimeout(() => {
             try {
-                let responseContent = "I'm not sure how to help with that. Could you please rephrase? You can also use the tools in the sidebar directly for specific tasks.";
+                let responseContent = "Não tenho certeza de como ajudar com isso. Você poderia reformular? Você também pode usar as ferramentas na barra lateral diretamente para tarefas específicas.";
 
-                if (messageContent.toLowerCase().includes('neighborhood') || messageContent.toLowerCase().includes('diagnos') || messageContent.toLowerCase().includes('need more trees')) {
-                    responseContent = "To find neighborhoods that need more trees, please use the 'Diagnostics' tool. You will need to provide geospatial data (NDVI, LST, population, and infrastructure) for your municipality.";
-                } else if (messageContent.toLowerCase().includes('planting plan') || messageContent.toLowerCase().includes('recommend')) {
-                    responseContent = "I can help with that. To generate a planting plan, please navigate to the 'Recommendations' tool and describe the area, environmental conditions, and your desired outcomes.";
-                } else if (messageContent.toLowerCase().includes('climate plan') || messageContent.toLowerCase().includes('draft')) {
-                    responseContent = "I can help draft a climate plan. Please use the 'Plan Generator' tool and provide the municipality name, a description of the problem, and suggested intervention areas.";
+                if (messageContent.toLowerCase().includes('bairro') || messageContent.toLowerCase().includes('diagnos') || messageContent.toLowerCase().includes('precisam de mais árvores')) {
+                    responseContent = "Para encontrar bairros que precisam de mais árvores, por favor, use a ferramenta 'Diagnóstico'. Você precisará fornecer dados geoespaciais (NDVI, LST, população e infraestrutura) para o seu município.";
+                } else if (messageContent.toLowerCase().includes('plano de plantio') || messageContent.toLowerCase().includes('recomenda')) {
+                    responseContent = "Eu posso ajudar com isso. Para gerar um plano de plantio, por favor, navegue até a ferramenta 'Recomendações' e descreva a área, as condições ambientais e os resultados desejados.";
+                } else if (messageContent.toLowerCase().includes('plano climático') || messageContent.toLowerCase().includes('elaborar')) {
+                    responseContent = "Eu posso ajudar a elaborar um plano climático. Por favor, use a ferramenta 'Gerador de Plano' e forneça o nome do município, uma descrição do problema e as áreas de intervenção sugeridas.";
                 }
                 
                 const assistantMessage: Message = {
@@ -68,7 +68,7 @@ export default function AssistantPage() {
                 setMessages(prev => [...prev, assistantMessage]);
 
             } catch (error) {
-                toast({ variant: 'destructive', title: 'Error', description: 'Something went wrong.' });
+                toast({ variant: 'destructive', title: 'Erro', description: 'Algo deu errado.' });
             } finally {
                 setIsLoading(false);
             }
@@ -79,7 +79,7 @@ export default function AssistantPage() {
         <div className="grid flex-1 items-start gap-4">
             <Card className="h-[calc(100vh-8rem)] flex flex-col">
                 <CardHeader>
-                    <CardTitle>Conversational Assistant</CardTitle>
+                    <CardTitle>Assistente Conversacional</CardTitle>
                 </CardHeader>
                 <CardContent className="flex-1 flex flex-col gap-4 overflow-hidden">
                     <div ref={scrollAreaRef} className="flex-1 overflow-y-auto pr-4 space-y-4">
@@ -123,7 +123,7 @@ export default function AssistantPage() {
                             <Input
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
-                                placeholder="Ask about climate planning..."
+                                placeholder="Pergunte sobre planejamento climático..."
                                 disabled={isLoading}
                             />
                             <Button type="submit" size="icon" disabled={isLoading || !input.trim()}>

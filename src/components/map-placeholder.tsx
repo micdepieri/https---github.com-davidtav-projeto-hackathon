@@ -19,10 +19,10 @@ export default function MapPlaceholder() {
         )}
         <div className="absolute inset-0 bg-background/60 flex items-center justify-center p-4 rounded-lg">
           <div className="text-center bg-background/80 p-4 rounded-md shadow-lg">
-            <h3 className="font-semibold text-foreground">Interactive Map</h3>
+            <h3 className="font-semibold text-foreground">Mapa Interativo</h3>
             <p className="text-sm text-muted-foreground">
-              To enable interactive maps, please add your Google Maps API key to
-              your environment variables.
+              Para habilitar mapas interativos, adicione sua chave de API do Google Maps
+              às suas variáveis de ambiente.
             </p>
           </div>
         </div>
