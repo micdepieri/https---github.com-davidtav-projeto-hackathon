@@ -98,11 +98,16 @@ async function getCityMapInternal(input: GetCityMapInput): Promise<GetCityMapOut
     console.log(`Fetching satellite map for: ${input.municipalityName}`);
     
     await initializeEE();
+    
+    const cityNameOnly = input.municipalityName.split(' - ')[0];
 
-    // 1. Get the geometry for the municipality
+    // 1. Get the geometry for the municipality from a public dataset
     console.log("Fetching municipality geometry...");
-    const brMunicipalities = ee.FeatureCollection('projects/ee-mateusbatista/assets/Brasil_Mun');
-    const municipalityFeature = brMunicipalities.filter(ee.Filter.eq('NM_MUN', input.municipalityName)).first();
+    const gaul = ee.FeatureCollection('FAO/GAUL/2015/level2');
+    const municipalityFeature = gaul.filter(ee.Filter.and(
+        ee.Filter.eq('ADM0_NAME', 'Brazil'),
+        ee.Filter.eq('ADM2_NAME', cityNameOnly)
+    )).first();
     const geometry = municipalityFeature.geometry();
     console.log("Municipality geometry obtained.");
 
