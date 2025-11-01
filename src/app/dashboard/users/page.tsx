@@ -23,6 +23,8 @@ interface UserProfile {
   email: string;
   roles?: string[];
   cityId?: string;
+  createdAt?: string; // Now a string
+  lastLogin?: string; // Now a string
 }
 
 interface City {
@@ -219,6 +221,8 @@ export default function UsersPage() {
                   <TableHead>Email</TableHead>
                   <TableHead>Perfil</TableHead>
                   <TableHead>Cidade</TableHead>
+                  <TableHead>Criado em</TableHead>
+                  <TableHead>Último Login</TableHead>
                   <TableHead>Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -231,6 +235,8 @@ export default function UsersPage() {
                       <TableCell>{user.email}</TableCell>
                       <TableCell className="capitalize">{user.roles?.join(', ').replace('_', ' ')}</TableCell>
                       <TableCell>{userCity?.name || 'N/A'}</TableCell>
+                      <TableCell>{user.createdAt}</TableCell>
+                      <TableCell>{user.lastLogin}</TableCell>
                       <TableCell>
                         {cities && <EditUserDialog user={user} cities={cities} onFinished={onEditFinished} />}
                       </TableCell>

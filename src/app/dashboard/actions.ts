@@ -20,9 +20,10 @@ import {
     getUrbanHeatIslandData,
 } from '@/ai/flows/get-urban-heat-island-data';
 import { z } from 'zod';
-import { addDoc, collection, getDocs, writeBatch, doc, updateDoc, setDoc, getDoc, serverTimestamp, query, where } from 'firebase/firestore';
+import { addDoc, collection, getDocs, writeBatch, doc, updateDoc, setDoc, getDoc, serverTimestamp, query, where, Timestamp } from 'firebase/firestore';
 import { getFirestore } from 'firebase/firestore';
 import { initializeApp, getApps, getApp, type FirebaseOptions } from 'firebase/app';
+import { format } from 'date-fns';
 
 
 // Firebase Admin Initialization for Server Actions
@@ -226,6 +227,14 @@ export async function getCityByCep(cep: string): Promise<{ success: boolean; dat
     }
 }
 
+// Helper to convert Firestore Timestamp to a formatted string
+const formatTimestamp = (timestamp: any): string | null => {
+  if (timestamp instanceof Timestamp) {
+    return format(timestamp.toDate(), "dd/MM/yyyy HH:mm");
+  }
+  // Handle cases where it might already be a string or other type
+  return null;
+};
 
 export async function getUsers(): Promise<{
   success: boolean;
@@ -236,7 +245,15 @@ export async function getUsers(): Promise<{
     const firestore = getFirestoreInstance();
     const usersCollection = collection(firestore, 'users');
     const snapshot = await getDocs(usersCollection);
-    const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const users = snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ...data,
+        createdAt: data.createdAt ? formatTimestamp(data.createdAt) : 'N/A',
+        lastLogin: data.lastLogin ? formatTimestamp(data.lastLogin) : 'N/A',
+      };
+    });
     return { success: true, data: users };
   } catch (e: any) {
     console.error('Failed to get users:', e);
@@ -296,5 +313,3 @@ export async function updateUser(formData: FormData): Promise<{
     return { success: false, error: e.message || 'Falha ao atualizar o usuário.' };
   }
 }
-
-    
