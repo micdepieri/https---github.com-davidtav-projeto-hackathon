@@ -66,11 +66,6 @@ export default function CitiesPage() {
             const isAdmin = userProfile?.roles?.includes('admin');
             if (!isAdmin) {
                 router.push('/dashboard');
-                toast({
-                    variant: 'destructive',
-                    title: 'Acesso Negado',
-                    description: 'Você não tem permissão para acessar esta página.',
-                });
             }
         }
     }, [user, userProfile, userLoading, profileLoading, router, toast]);
