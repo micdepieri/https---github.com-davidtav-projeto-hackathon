@@ -56,7 +56,7 @@ export default function DiagnosticsPage() {
     const { data: userProfile, loading: userProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
     // Get city data based on user profile
-    const cityRef = userProfile && firestore ? doc(firestore, 'cities', userProfile.cityId) : null;
+    const cityRef = userProfile && userProfile.cityId && firestore ? doc(firestore, 'cities', userProfile.cityId) : null;
     const { data: city, loading: cityLoading } = useDoc<City>(cityRef);
 
     const form = useForm<FormValues>({
