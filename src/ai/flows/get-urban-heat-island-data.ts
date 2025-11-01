@@ -9,7 +9,7 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
+import { z } from 'zod';
 
 const GetUrbanHeatIslandDataInputSchema = z.object({
     municipalityName: z.string().describe('The name of the municipality to fetch data for.'),
@@ -29,25 +29,6 @@ const GetUrbanHeatIslandDataOutputSchema = z.object({
 });
 
 export type GetUrbanHeatIslandDataOutput = z.infer<typeof GetUrbanHeatIslandDataOutputSchema>;
-
-// This is a placeholder. In a real scenario, you would use the Earth Engine API
-// to fetch and process the data, then return it as data URIs.
-function getFakeImageDataUri(text: string): string {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-        canvas.width = 200;
-        canvas.height = 100;
-        ctx.fillStyle = 'black';
-        ctx.fillRect(0, 0, 200, 100);
-        ctx.fillStyle = 'white';
-        ctx.font = '14px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(text, 100, 55);
-        return canvas.toDataURL();
-    }
-    return '';
-}
 
 
 export async function getUrbanHeatIslandData(input: GetUrbanHeatIslandDataInput): Promise<GetUrbanHeatIslandDataOutput> {
