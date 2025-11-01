@@ -1,3 +1,4 @@
+
 'use server';
 
 import {
@@ -32,7 +33,10 @@ export async function runDiagnostics(
   formData: FormData
 ): Promise<{
   success: boolean;
-  data?: DiagnoseUrbanHeatIslandsOutput;
+  data?: {
+    output: DiagnoseUrbanHeatIslandsOutput;
+    input: DiagnoseUrbanHeatIslandsInput;
+  };
   error?: string;
 }> {
   const parsed = diagnoseSchema.safeParse({
@@ -48,7 +52,7 @@ export async function runDiagnostics(
   }
 
   try {
-    // Step 1: Get data from (the fake) Earth Engine flow
+    // Step 1: Get data from Earth Engine flow
     const earthEngineData = await getUrbanHeatIslandData({ municipalityName: parsed.data.municipalityName });
 
     // Step 2: Pass the data to the diagnostics flow
@@ -61,7 +65,7 @@ export async function runDiagnostics(
     };
 
     const result = await diagnoseUrbanHeatIslands(diagnosticsInput);
-    return { success: true, data: result };
+    return { success: true, data: { output: result, input: diagnosticsInput } };
   } catch (error) {
     console.error(error);
     return { success: false, error: 'Ocorreu um erro durante o diagnóstico.' };

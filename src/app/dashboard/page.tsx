@@ -1,12 +1,14 @@
+
 "use client";
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from "@/hooks/use-toast";
 import { runDiagnostics } from '@/app/dashboard/actions';
-import type { DiagnoseUrbanHeatIslandsOutput } from '@/ai/flows/diagnose-urban-heat-islands';
+import type { DiagnoseUrbanHeatIslandsOutput, DiagnoseUrbanHeatIslandsInput } from '@/ai/flows/diagnose-urban-heat-islands';
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,9 +26,14 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
+type ResultsState = {
+    output: DiagnoseUrbanHeatIslandsOutput;
+    input: DiagnoseUrbanHeatIslandsInput;
+} | null;
+
 export default function DiagnosticsPage() {
     const [isLoading, setIsLoading] = useState(false);
-    const [results, setResults] = useState<DiagnoseUrbanHeatIslandsOutput | null>(null);
+    const [results, setResults] = useState<ResultsState>(null);
     const { toast } = useToast();
 
     const form = useForm<FormValues>({
@@ -105,9 +112,35 @@ export default function DiagnosticsPage() {
                                 <CardTitle>Resumo do Diagnóstico</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <p>{results.summary}</p>
+                                <p>{results.output.summary}</p>
                             </CardContent>
                         </Card>
+
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Mapas de Análise</CardTitle>
+                                <CardDescription>Visualização dos dados utilizados no diagnóstico.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="grid grid-cols-2 gap-4">
+                                <div className="flex flex-col gap-2">
+                                    <Label>Cobertura Vegetal (NDVI)</Label>
+                                    <Image src={results.input.ndviDataUri} alt="Mapa NDVI" width={400} height={400} className="rounded-md border" />
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    <Label>Temperatura da Superfície (LST)</Label>
+                                    <Image src={results.input.lstDataUri} alt="Mapa LST" width={400} height={400} className="rounded-md border" />
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    <Label>Densidade Populacional</Label>
+                                    <Image src={results.input.populationDensityData} alt="Mapa de Densidade Populacional" width={400} height={400} className="rounded-md border" />
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    <Label>Infraestrutura Crítica</Label>
+                                    <Image src={results.input.infrastructureData} alt="Mapa de Infraestrutura" width={400} height={400} className="rounded-md border" />
+                                </div>
+                            </CardContent>
+                        </Card>
+
                         <Card>
                             <CardHeader>
                                 <CardTitle>Zonas Prioritárias</CardTitle>
@@ -124,7 +157,7 @@ export default function DiagnosticsPage() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {results.priorityZones.map((zone, index) => (
+                                        {results.output.priorityZones.map((zone, index) => (
                                             <TableRow key={index}>
                                                 <TableCell className="font-medium">{zone.location}</TableCell>
                                                 <TableCell>{zone.heatRiskLevel}</TableCell>
@@ -140,7 +173,7 @@ export default function DiagnosticsPage() {
                                 <CardTitle>Ações Sugeridas</CardTitle>
                             </CardHeader>
                             <CardContent>
-                               <p className="whitespace-pre-wrap">{results.suggestedActions}</p>
+                               <p className="whitespace-pre-wrap">{results.output.suggestedActions}</p>
                             </CardContent>
                         </Card>
                     </div>
@@ -155,3 +188,4 @@ export default function DiagnosticsPage() {
         </div>
     );
 }
+
