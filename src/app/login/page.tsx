@@ -66,24 +66,12 @@ export default function LoginPage() {
 
   const signInForm = useForm<SignInFormValues>({ resolver: zodResolver(signInSchema) });
   const signUpForm = useForm<SignUpFormValues>({ resolver: zodResolver(signUpSchema) });
-  
-  const handleSeed = useCallback(async () => {
-    console.log("Checking if initial data needs to be seeded...");
-    const response = await seedInitialData();
-    if (response.success) {
-      console.log(response.message);
-    } else {
-      console.error('Seeding failed:', response.error);
-    }
-  }, []);
 
   useEffect(() => {
     if (!loading && user) {
       router.push('/dashboard');
     }
-    // Run seeder on initial load
-    handleSeed();
-  }, [user, loading, router, handleSeed]);
+  }, [user, loading, router]);
 
   const handleUserCreation = async (user: FirebaseUser, cityId?: string) => {
     if (!firestore || !user) return;
