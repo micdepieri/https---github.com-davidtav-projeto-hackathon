@@ -66,9 +66,10 @@ export async function runDiagnostics(
 
     const result = await diagnoseUrbanHeatIslands(diagnosticsInput);
     return { success: true, data: { output: result, input: diagnosticsInput } };
-  } catch (error) {
-    console.error(error);
-    return { success: false, error: 'Ocorreu um erro durante o diagnóstico.' };
+  } catch (error: any) {
+    console.error("Detailed error in runDiagnostics:", error);
+    const errorMessage = error.message || 'Ocorreu um erro durante o diagnóstico.';
+    return { success: false, error: errorMessage };
   }
 }
 
