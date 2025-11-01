@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -58,17 +57,18 @@ export default function CitiesPage() {
     const { data: userProfile, loading: profileLoading } = useDoc<UserProfile>(userProfileRef);
 
     useEffect(() => {
-        if (!userLoading && !profileLoading) {
-            if (!user) {
-                router.push('/login');
-                return;
-            }
+        if (!userLoading && !user) {
+          router.push('/login');
+          return;
+        }
+        // Wait until profile is loaded to check for admin role
+        if (!profileLoading && userProfile) {
             const isAdmin = userProfile?.roles?.includes('admin');
             if (!isAdmin) {
                 router.push('/dashboard');
             }
         }
-    }, [user, userProfile, userLoading, profileLoading, router, toast]);
+    }, [user, userProfile, userLoading, profileLoading, router]);
 
     const citiesQuery = useMemo(() => {
         if (!firestore) return null;

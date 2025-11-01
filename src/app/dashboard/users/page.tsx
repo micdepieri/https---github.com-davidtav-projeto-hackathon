@@ -164,24 +164,20 @@ export default function UsersPage() {
   }
 
   useEffect(() => {
-    if (!userLoading && !profileLoading) {
-      if (!currentUser) {
-        router.push('/login');
-        return;
-      }
-      const isAdmin = userProfile?.roles?.includes('admin');
-      if (!isAdmin) {
-        router.push('/dashboard');
-        toast({
-          variant: 'destructive',
-          title: 'Acesso Negado',
-          description: 'Você não tem permissão para acessar esta página.',
-        });
-      } else {
-        fetchUsers();
-      }
+    if (!userLoading && !currentUser) {
+      router.push('/login');
+      return;
     }
-  }, [currentUser, userProfile, userLoading, profileLoading, router, toast]);
+    // Wait until profile is loaded to check for admin role
+    if (!profileLoading && userProfile) {
+        const isAdmin = userProfile.roles?.includes('admin');
+        if (!isAdmin) {
+            router.push('/dashboard');
+        } else {
+           fetchUsers();
+        }
+    }
+  }, [currentUser, userProfile, userLoading, profileLoading, router]);
 
   const onEditFinished = () => {
     fetchUsers(); // Refresh user list
