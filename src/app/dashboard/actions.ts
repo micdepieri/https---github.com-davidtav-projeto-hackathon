@@ -161,57 +161,38 @@ export async function addCity(
   }
 }
 
-const initialCities = [
-    // Capitais
-    'Aracaju', 'Belém', 'Belo Horizonte', 'Boa Vista', 'Brasília', 'Campo Grande',
-    'Cuiabá', 'Florianópolis', 'Fortaleza', 'Goiânia', 'João Pessoa',
-    'Macapá', 'Maceió', 'Manaus', 'Natal', 'Palmas', 'Porto Alegre',
-    'Porto Velho', 'Recife', 'Rio Branco', 'Rio de Janeiro', 'Salvador',
-    'São Luís', 'São Paulo', 'Teresina', 'Vitória',
-    // Cidades do PR
-    'Curitiba', 'São José dos Pinhais', 'Araucária', 'Fazenda Rio Grande'
-];
-
-export async function seedInitialData(): Promise<{ success: boolean, error?: string, message?: string }> {
+export async function importBrazilianCities(): Promise<{ success: boolean, error?: string, message?: string }> {
     try {
         const firestore = getFirestoreInstance();
-        
-        // Seed cities
         const citiesRef = collection(firestore, 'cities');
         const citiesSnapshot = await getDocs(citiesRef);
-        if (citiesSnapshot.empty) {
-            const batch = writeBatch(firestore);
-            initialCities.forEach(name => {
-                const docRef = doc(citiesRef); 
-                batch.set(docRef, { name });
-            });
-            await batch.commit();
-            console.log('Successfully seeded cities collection.');
-        } else {
-            console.log('Cities collection already populated.');
+
+        if (!citiesSnapshot.empty) {
+            return { success: true, message: 'Os municípios já foram importados anteriormente.' };
         }
 
-        // Seed admin user
-        const adminEmail = 'admin@admin.com';
-        const usersRef = collection(firestore, 'users');
-        const q = query(usersRef, where("email", "==", adminEmail));
-        const userSnapshot = await getDocs(q);
-
-        if (userSnapshot.empty) {
-            // NOTE: This does not create a Firebase Auth user.
-            // This only creates the user profile in Firestore.
-            // The user must be created via the UI first.
-            console.log(`Admin user with email ${adminEmail} does not exist. It needs to be created through the sign up form.`);
-        } else {
-             console.log('Admin user already exists.');
+        const response = await fetch('https://servicodados.ibge.gov.br/api/v1/localidades/municipios');
+        if (!response.ok) {
+            throw new Error('Falha ao buscar municípios da API do IBGE.');
         }
+        const municipalities = await response.json();
 
-        return { success: true, message: 'Initial data check completed.' };
+        const batch = writeBatch(firestore);
+        municipalities.forEach((municipality: any) => {
+            const cityName = `${municipality.nome} - ${municipality.microrregiao.mesorregiao.UF.sigla}`;
+            const docRef = doc(citiesRef); 
+            batch.set(docRef, { name: cityName });
+        });
+
+        await batch.commit();
+
+        return { success: true, message: `${municipalities.length} municípios importados com sucesso!` };
     } catch (e: any) {
-        console.error('Failed to seed initial data:', e);
-        return { success: false, error: e.message || 'Failed to seed initial data.' };
+        console.error('Failed to import Brazilian cities:', e);
+        return { success: false, error: e.message || 'Falha ao importar municípios.' };
     }
 }
+
 
 export async function getCityByCep(cep: string): Promise<{ success: boolean; data?: any; error?: string; }> {
     try {

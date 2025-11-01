@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -5,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from "@/hooks/use-toast";
-import { addCity, getCityByCep } from '@/app/dashboard/actions';
+import { addCity, getCityByCep, importBrazilianCities } from '@/app/dashboard/actions';
 import { useCollection, useUser, useDoc } from '@/firebase';
 import { collection, query, doc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
@@ -17,7 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Search } from 'lucide-react';
+import { Loader2, Search, Download } from 'lucide-react';
 
 const cepFormSchema = z.object({
   cep: z.string().regex(/^\d{8}$/, "Por favor, insira um CEP válido com 8 dígitos."),
@@ -43,6 +44,7 @@ interface ViaCepResponse {
 export default function CitiesPage() {
     const [isSearchingCep, setIsSearchingCep] = useState(false);
     const [isAddingCity, setIsAddingCity] = useState(false);
+    const [isImporting, setIsImporting] = useState(false);
     const [foundCity, setFoundCity] = useState<ViaCepResponse | null>(null);
     const { toast } = useToast();
     const firestore = useFirestore();
@@ -61,7 +63,6 @@ export default function CitiesPage() {
           router.push('/login');
           return;
         }
-        // Wait until profile is loaded to check for admin role
         if (!profileLoading && userProfile) {
             const isAdmin = userProfile?.roles?.includes('admin');
             if (!isAdmin) {
@@ -75,7 +76,7 @@ export default function CitiesPage() {
         return query(collection(firestore, 'cities'));
     }, [firestore]);
     
-    const { data: cities, loading: citiesLoading } = useCollection<City>(citiesQuery);
+    const { data: cities, loading: citiesLoading, error: citiesError } = useCollection<City>(citiesQuery);
 
     const cepForm = useForm<CepFormValues>({
         resolver: zodResolver(cepFormSchema),
@@ -125,6 +126,17 @@ export default function CitiesPage() {
         setIsAddingCity(false);
     };
 
+    const handleImportCities = async () => {
+        setIsImporting(true);
+        const response = await importBrazilianCities();
+        if (response.success) {
+            toast({ title: "Importação Concluída", description: response.message });
+        } else {
+            toast({ variant: "destructive", title: "Erro na Importação", description: response.error });
+        }
+        setIsImporting(false);
+    };
+
     const pageIsLoading = userLoading || profileLoading;
     const isAdmin = userProfile?.roles?.includes('admin');
 
@@ -169,6 +181,18 @@ export default function CitiesPage() {
                         )}
                     </CardContent>
                 </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Importação em Massa</CardTitle>
+                        <CardDescription>Importe todos os municípios do Brasil usando a API do IBGE. Isso pode levar alguns segundos.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Button onClick={handleImportCities} disabled={isImporting} className="w-full">
+                            {isImporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                            {isImporting ? 'Importando...' : 'Importar Municípios do IBGE'}
+                        </Button>
+                    </CardContent>
+                </Card>
             </div>
             <div className="grid auto-rows-max items-start gap-4 md:gap-8 lg:col-span-2">
                 <Card>
@@ -181,6 +205,8 @@ export default function CitiesPage() {
                             <div className="flex items-center justify-center p-8">
                                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
                             </div>
+                        ) : citiesError ? (
+                             <div className="text-destructive">Erro ao carregar cidades.</div>
                         ) : (
                             <Table>
                                 <TableHeader>
