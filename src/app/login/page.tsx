@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -56,7 +56,10 @@ export default function LoginPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
-  const citiesQuery = firestore ? query(collection(firestore, 'cities')) : null;
+  const citiesQuery = useMemo(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'cities'));
+  }, [firestore]);
   const { data: cities, loading: citiesLoading } = useCollection<City>(citiesQuery);
 
   const signInForm = useForm<SignInFormValues>({ resolver: zodResolver(signInSchema) });
