@@ -2,7 +2,7 @@
 "use client";
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Bot, FileText, LayoutDashboard, Leaf, Map, Settings, Building } from 'lucide-react';
+import { Bot, FileText, LayoutDashboard, Leaf, Map, Settings, Building, Users } from 'lucide-react';
 import {
   Sidebar,
   SidebarHeader,
@@ -19,6 +19,7 @@ import { useMemo } from 'react';
 const menuItems = [
   { href: '/dashboard', label: 'Diagnóstico', icon: LayoutDashboard },
   { href: '/dashboard/cities', label: 'Cidades', icon: Building, adminOnly: true },
+  { href: '/dashboard/users', label: 'Usuários', icon: Users, adminOnly: true },
   { href: '/dashboard/recommendations', label: 'Recomendações', icon: Map },
   { href: '/dashboard/plan-generator', label: 'Gerador de Planos', icon: FileText },
   { href: '/dashboard/assistant', label: 'Assistente IA', icon: Bot },

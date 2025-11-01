@@ -20,7 +20,7 @@ import {
     getUrbanHeatIslandData,
 } from '@/ai/flows/get-urban-heat-island-data';
 import { z } from 'zod';
-import { addDoc, collection, getDocs, writeBatch, doc } from 'firebase/firestore';
+import { addDoc, collection, getDocs, writeBatch, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { getFirestore } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase';
 
@@ -191,4 +191,75 @@ export async function getCityByCep(cep: string): Promise<{ success: boolean; dat
         console.error('ViaCEP API error:', e);
         return { success: false, error: e.message || 'Ocorreu um erro ao consultar a API ViaCEP.' };
     }
+}
+
+
+export async function getUsers(): Promise<{
+  success: boolean;
+  data?: any[];
+  error?: string;
+}> {
+  try {
+    const { firestore } = initializeFirebase();
+    const usersCollection = collection(firestore, 'users');
+    const snapshot = await getDocs(usersCollection);
+    const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return { success: true, data: users };
+  } catch (e: any) {
+    console.error('Failed to get users:', e);
+    return { success: false, error: e.message || 'Falha ao buscar usuários.' };
+  }
+}
+
+const updateUserSchema = z.object({
+  userId: z.string(),
+  displayName: z.string().min(3, "O nome deve ter pelo menos 3 caracteres."),
+  role: z.enum(['admin', 'gestor_publico']),
+  cityId: z.string().optional().nullable(),
+});
+
+export async function updateUser(formData: FormData): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  const parsed = updateUserSchema.safeParse({
+    userId: formData.get('userId'),
+    displayName: formData.get('displayName'),
+    role: formData.get('role'),
+    cityId: formData.get('cityId') || null,
+  });
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.errors.map((e) => e.message).join(', '),
+    };
+  }
+
+  const { userId, displayName, role, cityId } = parsed.data;
+
+  // Admin role cannot have cityId, gestor_publico must have cityId
+  if (role === 'admin' && cityId) {
+    return { success: false, error: "Administradores não podem ser associados a uma cidade."};
+  }
+  if (role === 'gestor_publico' && !cityId) {
+    return { success: false, error: "Gestor Público deve ser associado a uma cidade."};
+  }
+
+
+  try {
+    const { firestore } = initializeFirebase();
+    const userRef = doc(firestore, 'users', userId);
+    
+    await updateDoc(userRef, {
+        displayName: displayName,
+        roles: [role],
+        cityId: cityId
+    });
+    
+    return { success: true };
+  } catch (e: any) {
+    console.error('Failed to update user:', e);
+    return { success: false, error: e.message || 'Falha ao atualizar o usuário.' };
+  }
 }
