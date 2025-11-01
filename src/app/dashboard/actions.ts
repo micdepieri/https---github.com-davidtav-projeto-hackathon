@@ -22,11 +22,15 @@ import {
 import {
     getCityInfo,
 } from '@/ai/flows/get-city-info-flow';
+import {
+    getCityMap as getCityMapFlow,
+} from '@/ai/flows/get-city-map-flow';
 import { z } from 'zod';
 import { addDoc, collection, getDocs, writeBatch, doc, updateDoc, setDoc, getDoc, serverTimestamp, query, where, Timestamp } from 'firebase/firestore';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, type Firestore } from 'firebase/firestore';
 import { initializeApp, getApps, getApp, type FirebaseOptions } from 'firebase/app';
 import { format } from 'date-fns';
+import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 
 
 // Firebase Admin Initialization for Server Actions
@@ -39,11 +43,16 @@ const firebaseConfig: FirebaseOptions = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
+let db: Firestore;
+
 function getFirestoreInstance() {
-    if (getApps().length === 0) {
-        initializeApp(firebaseConfig);
+    if (!db) {
+        if (getApps().length === 0) {
+            initializeApp(firebaseConfig);
+        }
+        db = getFirestore(getApp());
     }
-    return getFirestore(getApp());
+    return db;
 }
 
 
@@ -308,5 +317,19 @@ export async function generateDescriptionForCity(cityName: string): Promise<{ su
     } catch (e: any) {
         console.error('Failed to generate description:', e);
         return { success: false, error: e.message || 'Falha ao gerar a descrição da cidade.' };
+    }
+}
+
+
+export async function getCityMap(cityName: string): Promise<{ success: boolean; mapUrl?: string; error?: string; }> {
+    if (!cityName) {
+        return { success: false, error: "Nome da cidade é obrigatório." };
+    }
+    try {
+        const result = await getCityMapFlow({ municipalityName: cityName });
+        return { success: true, mapUrl: result.mapDataUri };
+    } catch (e: any) {
+        console.error('Failed to get city map:', e);
+        return { success: false, error: e.message || 'Falha ao obter o mapa da cidade.' };
     }
 }
