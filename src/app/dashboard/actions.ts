@@ -20,7 +20,7 @@ import {
     getUrbanHeatIslandData,
 } from '@/ai/flows/get-urban-heat-island-data';
 import { z } from 'zod';
-import { addDoc, collection, getDocs, writeBatch, doc, updateDoc, getDoc } from 'firebase/firestore';
+import { addDoc, collection, getDocs, writeBatch, doc, updateDoc, setDoc, getDoc, serverTimestamp, query, where } from 'firebase/firestore';
 import { getFirestore } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase';
 
@@ -153,29 +153,44 @@ const initialCities = [
     'Curitiba', 'São José dos Pinhais', 'Araucária', 'Fazenda Rio Grande'
 ];
 
-export async function seedInitialCities(): Promise<{ success: boolean, error?: string }> {
+export async function seedInitialData(): Promise<{ success: boolean, error?: string, message?: string }> {
     try {
         const { firestore } = initializeFirebase();
+        
+        // Seed cities
         const citiesRef = collection(firestore, 'cities');
-        const snapshot = await getDocs(citiesRef);
-
-        if (!snapshot.empty) {
+        const citiesSnapshot = await getDocs(citiesRef);
+        if (citiesSnapshot.empty) {
+            const batch = writeBatch(firestore);
+            initialCities.forEach(name => {
+                const docRef = doc(citiesRef); 
+                batch.set(docRef, { name });
+            });
+            await batch.commit();
+            console.log('Successfully seeded cities collection.');
+        } else {
             console.log('Cities collection already populated.');
-            return { success: true, error: 'Cities collection already populated.' };
         }
 
-        const batch = writeBatch(firestore);
-        initialCities.forEach(name => {
-            const docRef = doc(citiesRef); // Create a new doc reference
-            batch.set(docRef, { name });
-        });
+        // Seed admin user
+        const adminEmail = 'admin@admin.com';
+        const usersRef = collection(firestore, 'users');
+        const q = query(usersRef, where("email", "==", adminEmail));
+        const userSnapshot = await getDocs(q);
 
-        await batch.commit();
-        console.log('Successfully seeded cities collection.');
-        return { success: true };
+        if (userSnapshot.empty) {
+            // NOTE: This does not create a Firebase Auth user.
+            // This only creates the user profile in Firestore.
+            // The user must be created via the UI first.
+            console.log(`Admin user with email ${adminEmail} does not exist. It needs to be created through the sign up form.`);
+        } else {
+             console.log('Admin user already exists.');
+        }
+
+        return { success: true, message: 'Initial data check completed.' };
     } catch (e: any) {
-        console.error('Failed to seed cities:', e);
-        return { success: false, error: e.message || 'Failed to seed initial cities.' };
+        console.error('Failed to seed initial data:', e);
+        return { success: false, error: e.message || 'Failed to seed initial data.' };
     }
 }
 
