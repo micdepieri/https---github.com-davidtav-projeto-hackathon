@@ -12,7 +12,6 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import ee from '@google/earthengine';
-import { google } from 'googleapis';
 
 const GetUrbanHeatIslandDataInputSchema = z.object({
   municipalityName: z.string().describe('The name of the municipality to fetch data for.'),
@@ -33,38 +32,35 @@ const GetUrbanHeatIslandDataOutputSchema = z.object({
 
 export type GetUrbanHeatIslandDataOutput = z.infer<typeof GetUrbanHeatIslandDataOutputSchema>;
 
-async function initializeEE() {
-    console.log("Attempting to initialize Earth Engine...");
-    const privateKey = process.env.NEXT_PUBLIC_EE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+function initializeEE(): Promise<void> {
+    const privateKey = process.env.NEXT_PUBLIC_EE_PRIVATE_KEY;
     const clientEmail = process.env.NEXT_PUBLIC_EE_CLIENT_EMAIL;
-    
-    if (!privateKey || !clientEmail) {
-        throw new Error("NEXT_PUBLIC_EE_PRIVATE_KEY or NEXT_PUBLIC_EE_CLIENT_EMAIL environment variables are not set.");
+    const project = process.env.NEXT_PUBLIC_EE_PROJECT_ID;
+
+    if (!privateKey || !clientEmail || !project) {
+        throw new Error("Google Earth Engine environment variables (private key, client email, project ID) are not set.");
     }
-
-    const auth = new google.auth.JWT({
-        email: clientEmail,
-        key: privateKey,
-        scopes: ['https://www.googleapis.com/auth/earthengine', 'https://www.googleapis.com/auth/cloud-platform'],
-    });
     
-    console.log("JWT auth object created. Authorizing...");
+    console.log("Attempting to authenticate with Earth Engine...");
 
-    return new Promise<void>((resolve, reject) => {
-        auth.authorize((err) => {
-            if (err) {
-                console.error('Earth Engine authorization error:', err);
-                return reject(new Error('Failed to authorize with Google Earth Engine.'));
+    return new Promise((resolve, reject) => {
+        ee.data.authenticateViaPrivateKey(
+            {client_email: clientEmail, private_key: privateKey},
+            () => {
+                console.log("Earth Engine authentication successful.");
+                ee.initialize(null, null, () => {
+                    console.log("Earth Engine API initialized successfully.");
+                    resolve();
+                }, (err: string | undefined) => {
+                    console.error("Earth Engine initialization error:", err);
+                    reject(new Error(`Failed to initialize Earth Engine API: ${err}`));
+                });
+            },
+            (err: string | undefined) => {
+                console.error("Earth Engine authentication failed:", err);
+                reject(new Error(`Failed to authenticate with Earth Engine: ${err}`));
             }
-            console.log("Authorization successful. Initializing Earth Engine API...");
-            ee.initialize(auth, null, () => {
-                console.log("Earth Engine API initialized successfully.");
-                resolve();
-            }, (err: any) => {
-                 console.error('Earth Engine initialization error:', err);
-                 reject(new Error(`Failed to initialize Earth Engine API: ${err}`));
-            });
-        });
+        );
     });
 }
 
