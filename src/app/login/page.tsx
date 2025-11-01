@@ -66,12 +66,16 @@ export default function LoginPage() {
   const { data: cities, loading: citiesLoading } = useCollection<City>(citiesQuery);
 
   const handleSeed = useCallback(async () => {
-    if (cities && cities.length === 0 && !hasSeeded) {
+    // This function will now only run if you explicitly call it,
+    // for example from a button in an admin panel.
+    // It is no longer called automatically on page load.
+    if (!hasSeeded) {
       setHasSeeded(true);
-      console.log('No cities found, seeding initial capitals...');
+      console.log('Seeding initial capitals...');
       const response = await seedInitialCities();
       if (response.success) {
         console.log('Seeding successful');
+        toast({ title: 'Sucesso', description: 'Cidades iniciais carregadas.' });
       } else {
         console.error('Seeding failed:', response.error);
         toast({
@@ -81,13 +85,15 @@ export default function LoginPage() {
         });
       }
     }
-  }, [cities, hasSeeded, toast]);
+  }, [hasSeeded, toast]);
 
   useEffect(() => {
-    if (!citiesLoading) {
-      handleSeed();
+    if (process.env.NODE_ENV === 'development' && cities && cities.length === 0 && !hasSeeded) {
+       // You could trigger seeding here if desired for development environments
+       // handleSeed();
     }
-  }, [citiesLoading, handleSeed]);
+  }, [cities, hasSeeded, handleSeed]);
+
 
   const signInForm = useForm<SignInFormValues>({ resolver: zodResolver(signInSchema) });
   const signUpForm = useForm<SignUpFormValues>({ resolver: zodResolver(signUpSchema) });

@@ -20,7 +20,7 @@ import {
     getUrbanHeatIslandData,
 } from '@/ai/flows/get-urban-heat-island-data';
 import { z } from 'zod';
-import { addDoc, collection, getDocs, writeBatch } from 'firebase/firestore';
+import { addDoc, collection, getDocs, writeBatch, doc } from 'firebase/firestore';
 import { getFirestore } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase';
 
@@ -108,7 +108,7 @@ export async function runPlanGeneration(
     return { success: true, data: result };
   } catch (e: any) {
     console.error(e);
-    return { success: false, error: e.message ||'Falha ao gerar o plano' };
+    return { success: false, error: e.message || 'Falha ao gerar o plano' };
   }
 }
 
@@ -142,16 +142,21 @@ export async function addCity(
   }
 }
 
-const capitals = [
+const initialCities = [
+    // Capitais
     'Aracaju', 'Belém', 'Belo Horizonte', 'Boa Vista', 'Brasília', 'Campo Grande',
-    'Cuiabá', 'Curitiba', 'Florianópolis', 'Fortaleza', 'Goiânia', 'João Pessoa',
+    'Cuiabá', 'Florianópolis', 'Fortaleza', 'Goiânia', 'João Pessoa',
     'Macapá', 'Maceió', 'Manaus', 'Natal', 'Palmas', 'Porto Alegre',
     'Porto Velho', 'Recife', 'Rio Branco', 'Rio de Janeiro', 'Salvador',
-    'São Luís', 'São Paulo', 'Teresina', 'Vitória'
+    'São Luís', 'São Paulo', 'Teresina', 'Vitória',
+    // Cidades do PR
+    'Curitiba', 'São José dos Pinhais', 'Araucária', 'Fazenda Rio Grande'
 ];
 
 export async function seedInitialCities(): Promise<{ success: boolean, error?: string }> {
     try {
+        // This is a server-side action, so we initialize Firebase here.
+        // We can't use the client-side `initializeFirebase` from the provider directly.
         const { firestore } = initializeFirebase();
         const citiesRef = collection(firestore, 'cities');
         const snapshot = await getDocs(citiesRef);
@@ -162,9 +167,9 @@ export async function seedInitialCities(): Promise<{ success: boolean, error?: s
         }
 
         const batch = writeBatch(firestore);
-        capitals.forEach(name => {
-            const docRef = addDoc(citiesRef, { name })._key.path.segments.slice(-1)[0];
-             batch.set(collection(firestore, 'cities').doc(docRef), { name });
+        initialCities.forEach(name => {
+            const docRef = doc(citiesRef); // Create a new doc reference
+            batch.set(docRef, { name });
         });
 
         await batch.commit();
