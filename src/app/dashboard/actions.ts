@@ -155,15 +155,13 @@ const initialCities = [
 
 export async function seedInitialCities(): Promise<{ success: boolean, error?: string }> {
     try {
-        // This is a server-side action, so we initialize Firebase here.
-        // We can't use the client-side `initializeFirebase` from the provider directly.
         const { firestore } = initializeFirebase();
         const citiesRef = collection(firestore, 'cities');
         const snapshot = await getDocs(citiesRef);
 
         if (!snapshot.empty) {
             console.log('Cities collection already populated.');
-            return { success: true };
+            return { success: true, error: 'Cities collection already populated.' };
         }
 
         const batch = writeBatch(firestore);

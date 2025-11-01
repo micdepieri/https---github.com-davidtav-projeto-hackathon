@@ -56,42 +56,13 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [hasSeeded, setHasSeeded] = useState(false);
-
+  
   const citiesQuery = useMemo(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'cities'));
   }, [firestore]);
   
   const { data: cities, loading: citiesLoading } = useCollection<City>(citiesQuery);
-
-  const handleSeed = useCallback(async () => {
-    if (!hasSeeded) {
-      setHasSeeded(true);
-      console.log('Seeding initial capitals...');
-      const response = await seedInitialCities();
-      if (response.success) {
-        console.log('Seeding successful');
-        toast({ title: 'Sucesso', description: 'Cidades iniciais carregadas.' });
-      } else {
-        console.error('Seeding failed:', response.error);
-        if (response.error !== 'Cities collection already populated.') {
-           toast({
-            variant: 'destructive',
-            title: 'Erro ao carregar dados iniciais',
-            description: response.error,
-          });
-        }
-      }
-    }
-  }, [hasSeeded, toast]);
-
-  useEffect(() => {
-    if (cities && cities.length === 0 && !hasSeeded) {
-       handleSeed();
-    }
-  }, [cities, hasSeeded, handleSeed]);
-
 
   const signInForm = useForm<SignInFormValues>({ resolver: zodResolver(signInSchema) });
   const signUpForm = useForm<SignUpFormValues>({ resolver: zodResolver(signUpSchema) });
