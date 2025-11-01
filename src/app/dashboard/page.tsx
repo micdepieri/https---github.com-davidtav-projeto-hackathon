@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import Image from 'next/image';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -51,12 +51,16 @@ export default function DiagnosticsPage() {
     const { user } = useUser();
     const firestore = useFirestore();
 
-    // Get user profile
-    const userProfileRef = user ? doc(firestore!, 'users', user.uid) : null;
+    const userProfileRef = useMemo(() => {
+        if (!user || !firestore) return null;
+        return doc(firestore, 'users', user.uid);
+    }, [user, firestore]);
     const { data: userProfile, loading: userProfileLoading } = useDoc<UserProfile>(userProfileRef);
-
-    // Get city data based on user profile
-    const cityRef = userProfile && userProfile.cityId && firestore ? doc(firestore, 'cities', userProfile.cityId) : null;
+    
+    const cityRef = useMemo(() => {
+        if (!userProfile || !userProfile.cityId || !firestore) return null;
+        return doc(firestore, 'cities', userProfile.cityId);
+    }, [userProfile, firestore]);
     const { data: city, loading: cityLoading } = useDoc<City>(cityRef);
 
     const form = useForm<FormValues>({

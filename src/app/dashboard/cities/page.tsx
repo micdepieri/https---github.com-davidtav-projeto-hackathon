@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -34,7 +34,11 @@ export default function CitiesPage() {
     const { toast } = useToast();
     const firestore = useFirestore();
 
-    const citiesQuery = firestore ? query(collection(firestore, 'cities')) : null;
+    const citiesQuery = useMemo(() => {
+        if (!firestore) return null;
+        return query(collection(firestore, 'cities'));
+    }, [firestore]);
+    
     const { data: cities, loading: citiesLoading } = useCollection<City>(citiesQuery);
 
     const form = useForm<FormValues>({

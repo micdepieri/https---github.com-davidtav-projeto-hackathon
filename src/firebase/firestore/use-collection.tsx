@@ -1,38 +1,12 @@
 
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   onSnapshot,
-  collection,
-  query,
-  where,
-  orderBy,
-  limit,
   type Query,
-  type QueryConstraint,
   type DocumentData,
-  type CollectionReference,
 } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
-
-// A utility hook to memoize the Firestore query.
-// This is important to prevent re-creating the query on every render,
-// which would cause an infinite loop in the `useEffect` of `useCollection`.
-export function useMemoizedQuery<T = DocumentData>(
-  path: string,
-  constraints: QueryConstraint[] = []
-) {
-  const firestore = useFirestore();
-
-  const q = useMemo(() => {
-    if (!firestore) return null;
-    const ref = collection(firestore, path) as CollectionReference<T>;
-    return query(ref, ...constraints);
-  }, [firestore, path, constraints]); // Note: constraints need to be stable
-
-  return q;
-}
 
 export function useCollection<T = DocumentData>(
   query: Query<T> | null
@@ -42,12 +16,13 @@ export function useCollection<T = DocumentData>(
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    if (!query) {
+    if (query === null) {
+      setData(null);
       setLoading(false);
-      // You might want to set data to null or an initial state here
       return;
     }
-
+    // The query is not null, so we can assume it's a Query<T>
+    // and we should start loading.
     setLoading(true);
 
     const unsubscribe = onSnapshot(
@@ -67,7 +42,7 @@ export function useCollection<T = DocumentData>(
     );
 
     return () => unsubscribe();
-  }, [query]); // Effect dependencies only include the memoized query
+  }, [query]); // Effect dependencies only include the query
 
   return { data, loading, error };
 }

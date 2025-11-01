@@ -1,28 +1,12 @@
 
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   onSnapshot,
-  doc,
   type DocumentReference,
   type DocumentData,
 } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
-
-// A utility hook to memoize the Firestore document reference.
-// This is important to prevent re-creating the reference on every render,
-// which would cause an infinite loop in the `useEffect` of `useDoc`.
-export function useMemoizedDocRef<T = DocumentData>(path: string) {
-  const firestore = useFirestore();
-
-  const ref = useMemo(
-    () => (firestore ? (doc(firestore, path) as DocumentReference<T>) : null),
-    [firestore, path]
-  );
-
-  return ref;
-}
 
 export function useDoc<T = DocumentData>(
   ref: DocumentReference<T> | null
@@ -32,12 +16,13 @@ export function useDoc<T = DocumentData>(
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    if (!ref) {
+    if (ref === null) {
+      setData(null);
       setLoading(false);
-      // You might want to set data to null or an initial state here
       return;
     }
-
+    // The ref is not null, so we can assume it's a DocumentReference<T>
+    // and we should start loading.
     setLoading(true);
 
     const unsubscribe = onSnapshot(
