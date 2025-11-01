@@ -4,7 +4,7 @@
  * @fileOverview A flow for fetching urban heat island data from Google Earth Engine.
  *
  * - getUrbanHeatIslandData - A function that fetches urban heat island data.
- * - GetUrbanHeatIslandDataInput - The input type for the getUrbanHeatIslandData function.
+ * - GetUrbanHeatIslandDataInput - The input type for the getUrbanheatIslandData function.
  * - GetUrbanHeatIslandDataOutput - The return type for the getUrbanHeatIslandData function.
  */
 
@@ -75,7 +75,7 @@ const getUrbanHeatIslandDataFlow = ai.defineFlow(
   {
     name: 'getUrbanHeatIslandDataFlow',
     inputSchema: GetUrbanHeatIslandDataOutputSchema, // Using output as input for placeholder
-    outputSchema: GetUrbanHeat-IslandDataOutputSchema,
+    outputSchema: GetUrbanHeatIslandDataOutputSchema,
   },
   async (data) => {
     // This flow is a placeholder. It currently just passes through the fake data.
