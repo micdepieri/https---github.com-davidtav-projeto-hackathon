@@ -20,7 +20,7 @@ import {
     getUrbanHeatIslandData,
 } from '@/ai/flows/get-urban-heat-island-data';
 import { z } from 'zod';
-import { addDoc, collection } from 'firebase/firestore';
+import { addDoc, collection, getDocs, writeBatch } from 'firebase/firestore';
 import { getFirestore } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase';
 
@@ -140,4 +140,38 @@ export async function addCity(
     console.error('Failed to add city:', e);
     return { success: false, error: e.message || 'Falha ao adicionar cidade.' };
   }
+}
+
+const capitals = [
+    'Aracaju', 'Belém', 'Belo Horizonte', 'Boa Vista', 'Brasília', 'Campo Grande',
+    'Cuiabá', 'Curitiba', 'Florianópolis', 'Fortaleza', 'Goiânia', 'João Pessoa',
+    'Macapá', 'Maceió', 'Manaus', 'Natal', 'Palmas', 'Porto Alegre',
+    'Porto Velho', 'Recife', 'Rio Branco', 'Rio de Janeiro', 'Salvador',
+    'São Luís', 'São Paulo', 'Teresina', 'Vitória'
+];
+
+export async function seedInitialCities(): Promise<{ success: boolean, error?: string }> {
+    try {
+        const { firestore } = initializeFirebase();
+        const citiesRef = collection(firestore, 'cities');
+        const snapshot = await getDocs(citiesRef);
+
+        if (!snapshot.empty) {
+            console.log('Cities collection already populated.');
+            return { success: true };
+        }
+
+        const batch = writeBatch(firestore);
+        capitals.forEach(name => {
+            const docRef = addDoc(citiesRef, { name })._key.path.segments.slice(-1)[0];
+             batch.set(collection(firestore, 'cities').doc(docRef), { name });
+        });
+
+        await batch.commit();
+        console.log('Successfully seeded cities collection.');
+        return { success: true };
+    } catch (e: any) {
+        console.error('Failed to seed cities:', e);
+        return { success: false, error: e.message || 'Failed to seed initial cities.' };
+    }
 }

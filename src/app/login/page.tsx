@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { seedInitialCities } from '@/app/dashboard/actions';
 
 function GoogleIcon() {
   return (
@@ -55,12 +56,38 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [hasSeeded, setHasSeeded] = useState(false);
 
   const citiesQuery = useMemo(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'cities'));
   }, [firestore]);
+  
   const { data: cities, loading: citiesLoading } = useCollection<City>(citiesQuery);
+
+  const handleSeed = useCallback(async () => {
+    if (cities && cities.length === 0 && !hasSeeded) {
+      setHasSeeded(true);
+      console.log('No cities found, seeding initial capitals...');
+      const response = await seedInitialCities();
+      if (response.success) {
+        console.log('Seeding successful');
+      } else {
+        console.error('Seeding failed:', response.error);
+        toast({
+          variant: 'destructive',
+          title: 'Erro ao carregar dados iniciais',
+          description: response.error,
+        });
+      }
+    }
+  }, [cities, hasSeeded, toast]);
+
+  useEffect(() => {
+    if (!citiesLoading) {
+      handleSeed();
+    }
+  }, [citiesLoading, handleSeed]);
 
   const signInForm = useForm<SignInFormValues>({ resolver: zodResolver(signInSchema) });
   const signUpForm = useForm<SignUpFormValues>({ resolver: zodResolver(signUpSchema) });
@@ -85,7 +112,7 @@ export default function LoginPage() {
         createdAt: serverTimestamp(),
         lastLogin: serverTimestamp(),
         roles: ['admin'],
-        cityId: cityId || null, // Set cityId for new users
+        cityId: cityId || null,
       }, { merge: true });
       toast({ title: "Bem-vindo!", description: "Sua conta foi criada." });
     } else {
@@ -100,9 +127,6 @@ export default function LoginPage() {
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
-      // For Google Sign-In, we can't ask for a city during the popup flow.
-      // They will need to have it assigned by an admin later, or we can redirect
-      // them to a profile completion page. For now, we'll leave it null.
       await handleUserCreation(result.user);
     } catch (error: any) {
       toast({ variant: "destructive", title: "Falha na autenticação", description: error.message });
@@ -133,7 +157,7 @@ export default function LoginPage() {
       await result.user.reload();
       const updatedUser = { ...result.user, displayName };
       await handleUserCreation(updatedUser, cityId);
-    } catch (error: any) {
+    } catch (error: any)      {
       toast({ variant: "destructive", title: "Falha no cadastro", description: error.code === 'auth/email-already-in-use' ? 'Este e-mail já está em uso.' : error.message });
     } finally {
       setIsLoading(false);
