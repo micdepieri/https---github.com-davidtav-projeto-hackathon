@@ -1,7 +1,8 @@
+
 "use client";
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Bot, FileText, LayoutDashboard, Leaf, Map, Settings } from 'lucide-react';
+import { Bot, FileText, LayoutDashboard, Leaf, Map, Settings, Building } from 'lucide-react';
 import {
   Sidebar,
   SidebarHeader,
@@ -14,6 +15,7 @@ import {
 
 const menuItems = [
   { href: '/dashboard', label: 'Diagnóstico', icon: LayoutDashboard },
+  { href: '/dashboard/cities', label: 'Cidades', icon: Building },
   { href: '/dashboard/recommendations', label: 'Recomendações', icon: Map },
   { href: '/dashboard/plan-generator', label: 'Gerador de Planos', icon: FileText },
   { href: '/dashboard/assistant', label: 'Assistente IA', icon: Bot },

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -9,10 +9,13 @@ import { z } from 'zod';
 import { useToast } from "@/hooks/use-toast";
 import { runDiagnostics } from '@/app/dashboard/actions';
 import type { DiagnoseUrbanHeatIslandsOutput, DiagnoseUrbanHeatIslandsInput } from '@/ai/flows/diagnose-urban-heat-islands';
+import { useUser, useDoc } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
+
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -20,7 +23,6 @@ import { Loader2 } from 'lucide-react';
 import MapPlaceholder from '@/components/map-placeholder';
 
 const formSchema = z.object({
-  municipalityName: z.string().min(3, "Por favor, insira o nome do município."),
   municipalityDescription: z.string().min(10, "Por favor, forneça uma descrição mais detalhada."),
 });
 
@@ -31,25 +33,54 @@ type ResultsState = {
     input: DiagnoseUrbanHeatIslandsInput;
 } | null;
 
+interface UserProfile {
+    id: string;
+    displayName: string;
+    cityId: string;
+}
+
+interface City {
+    id: string;
+    name: string;
+}
+
 export default function DiagnosticsPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [results, setResults] = useState<ResultsState>(null);
     const { toast } = useToast();
+    const { user } = useUser();
+    const firestore = useFirestore();
+
+    // Get user profile
+    const userProfileRef = user ? doc(firestore!, 'users', user.uid) : null;
+    const { data: userProfile, loading: userProfileLoading } = useDoc<UserProfile>(userProfileRef);
+
+    // Get city data based on user profile
+    const cityRef = userProfile && firestore ? doc(firestore, 'cities', userProfile.cityId) : null;
+    const { data: city, loading: cityLoading } = useDoc<City>(cityRef);
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
         defaultValues: {
-            municipalityName: "",
             municipalityDescription: "",
         }
     });
 
     const onSubmit = async (data: FormValues) => {
+        if (!city?.name) {
+            toast({
+                variant: "destructive",
+                title: "Cidade não encontrada",
+                description: "O seu usuário não está vinculado a uma cidade. Por favor, entre em contato com o administrador.",
+            });
+            return;
+        }
+
         setIsLoading(true);
         setResults(null);
         
         const formData = new FormData();
-        formData.append('municipalityName', data.municipalityName);
+        formData.append('municipalityName', city.name);
         formData.append('municipalityDescription', data.municipalityDescription);
 
         const response = await runDiagnostics(formData);
@@ -66,6 +97,8 @@ export default function DiagnosticsPage() {
         }
         setIsLoading(false);
     };
+    
+    const isLoadingData = userProfileLoading || cityLoading;
 
     return (
         <div className="grid flex-1 items-start gap-4 md:gap-8 lg:grid-cols-3 xl:grid-cols-3">
@@ -73,23 +106,27 @@ export default function DiagnosticsPage() {
                 <Card>
                     <CardHeader>
                         <CardTitle>Diagnóstico Automatizado</CardTitle>
-                        <CardDescription>Insira o município para identificar ilhas de calor e zonas prioritárias para intervenção verde usando dados do Google Earth Engine.</CardDescription>
+                        {isLoadingData ? (
+                             <CardDescription>Carregando dados da cidade...</CardDescription>
+                        ) : city ? (
+                             <CardDescription>
+                                Identificar ilhas de calor e zonas prioritárias para intervenção verde em <strong>{city.name}</strong> usando dados do Google Earth Engine.
+                            </CardDescription>
+                        ) : (
+                             <CardDescription>Vincule seu usuário a uma cidade para iniciar o diagnóstico.</CardDescription>
+                        )}
+                       
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-6">
-                            <div className="grid gap-2">
-                                <Label htmlFor="municipalityName">Nome do Município</Label>
-                                <Input id="municipalityName" {...form.register('municipalityName')} placeholder="Ex: Juquitiba" />
-                                {form.formState.errors.municipalityName && <p className="text-sm text-destructive">{form.formState.errors.municipalityName.message}</p>}
-                            </div>
                             <div className="grid gap-2">
                                 <Label htmlFor="municipalityDescription">Descrição do Município</Label>
                                 <Textarea id="municipalityDescription" {...form.register('municipalityDescription')} placeholder="Ex: Uma cidade pequena com Mata Atlântica no entorno e área urbana em crescimento..." />
                                 {form.formState.errors.municipalityDescription && <p className="text-sm text-destructive">{form.formState.errors.municipalityDescription.message}</p>}
                             </div>
                             
-                            <Button type="submit" disabled={isLoading}>
-                                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            <Button type="submit" disabled={isLoading || isLoadingData || !city}>
+                                {(isLoading || isLoadingData) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                 {isLoading ? "Analisando..." : "Executar Diagnóstico"}
                             </Button>
                         </form>
@@ -188,4 +225,3 @@ export default function DiagnosticsPage() {
         </div>
     );
 }
-

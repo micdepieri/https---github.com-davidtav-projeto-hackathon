@@ -20,6 +20,9 @@ import {
     getUrbanHeatIslandData,
 } from '@/ai/flows/get-urban-heat-island-data';
 import { z } from 'zod';
+import { addDoc, collection } from 'firebase/firestore';
+import { getFirestore } from 'firebase/firestore';
+import { initializeFirebase } from '@/firebase';
 
 
 const diagnoseSchema = z.object({
@@ -53,7 +56,9 @@ export async function runDiagnostics(
 
   try {
     // Step 1: Get data from Earth Engine flow
+    console.log(`Getting Earth Engine data for ${parsed.data.municipalityName}`);
     const earthEngineData = await getUrbanHeatIslandData({ municipalityName: parsed.data.municipalityName });
+    console.log('Successfully got Earth Engine data');
 
     // Step 2: Pass the data to the diagnostics flow
     const diagnosticsInput: DiagnoseUrbanHeatIslandsInput = {
@@ -64,7 +69,9 @@ export async function runDiagnostics(
       infrastructureData: earthEngineData.infrastructureData,
     };
 
+    console.log('Running diagnostics flow');
     const result = await diagnoseUrbanHeatIslands(diagnosticsInput);
+    console.log('Successfully ran diagnostics flow');
     return { success: true, data: { output: result, input: diagnosticsInput } };
   } catch (error: any) {
     console.error("Detailed error in runDiagnostics:", error);
@@ -83,9 +90,9 @@ export async function runRecommendations(
   try {
     const result = await generatePlantingRecommendations(input);
     return { success: true, data: result };
-  } catch (e) {
+  } catch (e: any) {
     console.error(e);
-    return { success: false, error: 'Falha ao gerar recomendações' };
+    return { success: false, error: e.message || 'Falha ao gerar recomendações' };
   }
 }
 
@@ -99,8 +106,38 @@ export async function runPlanGeneration(
   try {
     const result = await generateClimatePlan(input);
     return { success: true, data: result };
-  } catch (e) {
+  } catch (e: any) {
     console.error(e);
-    return { success: false, error: 'Falha ao gerar o plano' };
+    return { success: false, error: e.message ||'Falha ao gerar o plano' };
+  }
+}
+
+const addCitySchema = z.object({
+  cityName: z.string().min(3, 'O nome da cidade é obrigatório.'),
+});
+
+export async function addCity(
+  formData: FormData
+): Promise<{ success: boolean; error?: string }> {
+  const parsed = addCitySchema.safeParse({
+    cityName: formData.get('cityName'),
+  });
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.errors.map((e) => e.message).join(', '),
+    };
+  }
+
+  try {
+    const { firestore } = initializeFirebase();
+    await addDoc(collection(firestore, 'cities'), {
+      name: parsed.data.cityName,
+    });
+    return { success: true };
+  } catch (e: any) {
+    console.error('Failed to add city:', e);
+    return { success: false, error: e.message || 'Falha ao adicionar cidade.' };
   }
 }

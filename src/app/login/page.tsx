@@ -8,12 +8,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Leaf, Loader2 } from 'lucide-react';
-import { useAuth, useFirestore, useUser } from '@/firebase';
+import { useAuth, useFirestore, useUser, useCollection } from '@/firebase';
 import { GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp, collection, query } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
@@ -38,9 +39,14 @@ const signUpSchema = z.object({
   displayName: z.string().min(3, 'O nome deve ter pelo menos 3 caracteres.'),
   email: z.string().email('E-mail inválido.'),
   password: z.string().min(6, 'A senha deve ter pelo menos 6 caracteres.'),
+  cityId: z.string().min(1, 'Por favor, selecione uma cidade.'),
 });
 type SignUpFormValues = z.infer<typeof signUpSchema>;
 
+interface City {
+    id: string;
+    name: string;
+}
 
 export default function LoginPage() {
   const { user, loading } = useUser();
@@ -49,6 +55,9 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+
+  const citiesQuery = firestore ? query(collection(firestore, 'cities')) : null;
+  const { data: cities, loading: citiesLoading } = useCollection<City>(citiesQuery);
 
   const signInForm = useForm<SignInFormValues>({ resolver: zodResolver(signInSchema) });
   const signUpForm = useForm<SignUpFormValues>({ resolver: zodResolver(signUpSchema) });
@@ -59,7 +68,7 @@ export default function LoginPage() {
     }
   }, [user, loading, router]);
 
-  const handleUserCreation = async (user: any) => {
+  const handleUserCreation = async (user: any, cityId?: string) => {
     if (!firestore || !user) return;
     const userRef = doc(firestore, 'users', user.uid);
     const userDoc = await getDoc(userRef);
@@ -73,7 +82,7 @@ export default function LoginPage() {
         createdAt: serverTimestamp(),
         lastLogin: serverTimestamp(),
         roles: ['admin'],
-        cities: [],
+        cityId: cityId || null, // Set cityId for new users
       }, { merge: true });
       toast({ title: "Bem-vindo!", description: "Sua conta foi criada." });
     } else {
@@ -88,6 +97,9 @@ export default function LoginPage() {
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
+      // For Google Sign-In, we can't ask for a city during the popup flow.
+      // They will need to have it assigned by an admin later, or we can redirect
+      // them to a profile completion page. For now, we'll leave it null.
       await handleUserCreation(result.user);
     } catch (error: any) {
       toast({ variant: "destructive", title: "Falha na autenticação", description: error.message });
@@ -109,16 +121,15 @@ export default function LoginPage() {
     }
   };
   
-  const handleEmailSignUp = async ({ displayName, email, password }: SignUpFormValues) => {
+  const handleEmailSignUp = async ({ displayName, email, password, cityId }: SignUpFormValues) => {
     if (!auth) return;
     setIsLoading(true);
     try {
       const result = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(result.user, { displayName });
-      // Reload user to get the updated profile
       await result.user.reload();
       const updatedUser = { ...result.user, displayName };
-      await handleUserCreation(updatedUser);
+      await handleUserCreation(updatedUser, cityId);
     } catch (error: any) {
       toast({ variant: "destructive", title: "Falha no cadastro", description: error.code === 'auth/email-already-in-use' ? 'Este e-mail já está em uso.' : error.message });
     } finally {
@@ -186,6 +197,30 @@ export default function LoginPage() {
                   <Input id="signup-password" type="password" {...signUpForm.register('password')} />
                    {signUpForm.formState.errors.password && <p className="text-sm text-destructive">{signUpForm.formState.errors.password.message}</p>}
                 </div>
+                <div className="space-y-2">
+                    <Label htmlFor="signup-city">Cidade</Label>
+                    <Controller
+                        name="cityId"
+                        control={signUpForm.control}
+                        render={({ field }) => (
+                            <Select onValueChange={field.onChange} defaultValue={field.value} disabled={citiesLoading}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Selecione sua cidade" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {citiesLoading ? (
+                                        <SelectItem value="loading" disabled>Carregando cidades...</SelectItem>
+                                    ) : (
+                                        cities?.map(city => (
+                                            <SelectItem key={city.id} value={city.id}>{city.name}</SelectItem>
+                                        ))
+                                    )}
+                                </SelectContent>
+                            </Select>
+                        )}
+                    />
+                    {signUpForm.formState.errors.cityId && <p className="text-sm text-destructive">{signUpForm.formState.errors.cityId.message}</p>}
+                </div>
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Criar Conta
@@ -210,7 +245,3 @@ export default function LoginPage() {
     </main>
   );
 }
-
-    
-
-    
