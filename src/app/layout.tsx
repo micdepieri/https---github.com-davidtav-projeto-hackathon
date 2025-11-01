@@ -1,7 +1,9 @@
+
 import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
+import { FirebaseProvider } from '@/firebase';
 
 export const metadata: Metadata = {
   title: 'Cool Cities Climate Planner',
@@ -28,7 +30,7 @@ export default function RootLayout({
         />
       </head>
       <body className={cn('font-body antialiased')}>
-        {children}
+        <FirebaseProvider>{children}</FirebaseProvider>
         <Toaster />
       </body>
     </html>
