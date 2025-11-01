@@ -23,34 +23,40 @@ export type GetCityInfoOutput = z.infer<typeof GetCityInfoOutputSchema>;
 
 
 async function getIbgeData(municipalityName: string): Promise<any> {
-    const response = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/municipios/${municipalityName}`);
-    if (!response.ok) {
-        // Try to search if the exact name is not found
-        const searchResponse = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/municipios`);
-        const allCities = await searchResponse.json();
-        const city = allCities.find((c: any) => c.nome.toLowerCase() === municipalityName.toLowerCase());
-        if (city) {
-            const cityDetailsResponse = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/municipios/${city.id}`);
-             if (!cityDetailsResponse.ok) throw new Error(`Failed to fetch city data from IBGE for ${municipalityName}`);
-             return cityDetailsResponse.json();
-        }
-       throw new Error(`Failed to fetch city data from IBGE for ${municipalityName}`);
+    // First, try a direct search, which works for many names.
+    const searchResponse = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/municipios?orderBy=nome&view=busca`);
+    if (!searchResponse.ok) {
+        throw new Error(`Failed to fetch city list from IBGE.`);
     }
-    return response.json();
+    const allCities = await searchResponse.json();
+    const foundCity = allCities.find((c: any) => c.nome.toLowerCase() === municipalityName.toLowerCase());
+
+    if (!foundCity) {
+        throw new Error(`Municipality "${municipalityName}" not found in IBGE database.`);
+    }
+
+    // Now fetch the detailed data for the found city ID
+    const detailsResponse = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/municipios/${foundCity.id}`);
+    if (!detailsResponse.ok) {
+        throw new Error(`Failed to fetch city details from IBGE for ${municipalityName}`);
+    }
+    return detailsResponse.json();
 }
 
 async function getCityPopulation(cityId: string): Promise<any> {
     const response = await fetch(`https://servicodados.ibge.gov.br/api/v3/agregados/6579/periodos/2022/variaveis/9324?localidades=N6[${cityId}]`);
      if (!response.ok) return { "estimativa": "não disponível" };
     const data = await response.json();
-    return data[0]?.resultados[0]?.series[0]?.serie || { "2022": "não disponível" };
+    const result = data[0]?.resultados[0]?.series[0]?.serie || { "2022": "não disponível" };
+    return result["2022"];
 }
 
 async function getCityArea(cityId: string): Promise<any> {
      const response = await fetch(`https://servicodados.ibge.gov.br/api/v3/agregados/1301/periodos/2022/variaveis/615?localidades=N6[${cityId}]`);
      if (!response.ok) return { "valor": "não disponível" };
      const data = await response.json();
-     return data[0]?.resultados[0]?.series[0]?.serie || { "2022": "não disponível" };
+     const result = data[0]?.resultados[0]?.series[0]?.serie || { "2022": "não disponível" };
+     return result["2022"];
 }
 
 
@@ -59,14 +65,14 @@ const prompt = ai.definePrompt({
     input: { schema: z.any() },
     output: { schema: GetCityInfoOutputSchema },
     prompt: `You are an expert urban planner assistant. Based on the following data from IBGE for a Brazilian municipality, generate a concise and informative description (in Portuguese) suitable for a climate planning context. 
-    Focus on key aspects like location, biome, population, and area. Keep it to 2-3 sentences.
+    Focus on key aspects like location, biome (region), population, and area. Keep it to 2-3 sentences.
 
     IBGE Data:
     - Nome: {{{name}}}
     - Microrregião: {{{microrregiao.nome}}}
     - Mesorregião: {{{microrregiao.mesorregiao.nome}}}
     - UF: {{{microrregiao.mesorregiao.UF.sigla}}}
-    - Bioma: {{{microrregiao.mesorregiao.UF.regiao.nome}}} (Note: This is the broader region's biome, adapt if more specific info is known)
+    - Região (Bioma): {{{microrregiao.mesorregiao.UF.regiao.nome}}}
     - População (Estimativa 2022): {{{population}}}
     - Área Territorial (km²): {{{area}}}
     
@@ -85,13 +91,13 @@ const getCityInfoFlow = ai.defineFlow(
     const cityNameOnly = municipalityName.split(' - ')[0];
 
     const ibgeData = await getIbgeData(cityNameOnly);
-    const populationData = await getCityPopulation(ibgeData.id);
-    const areaData = await getCityArea(ibgeData.id);
+    const population = await getCityPopulation(ibgeData.id);
+    const area = await getCityArea(ibgeData.id);
 
     const fullData = {
         ...ibgeData,
-        population: populationData['2022'],
-        area: areaData['2022']
+        population: population,
+        area: area
     };
     
     const { output } = await prompt(fullData);
