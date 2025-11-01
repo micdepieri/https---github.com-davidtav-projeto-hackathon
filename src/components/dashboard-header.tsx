@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from '@/components/ui/button';
@@ -16,17 +17,38 @@ import {
 } from '@/components/ui/avatar';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { useAuth } from '@/firebase';
+import { useAuth, useDoc, useFirestore, useUser } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
+import { useMemo } from 'react';
+import { doc } from 'firebase/firestore';
+import Link from 'next/link';
 
 const userAvatar = PlaceHolderImages.find((img) => img.id === 'user-avatar-1');
 
+interface UserProfile {
+    roles?: string[];
+    displayName?: string;
+}
+
 export function DashboardHeader() {
   const auth = useAuth();
+  const { user } = useUser();
+  const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
+
+  const userProfileRef = useMemo(() => {
+    if (!user || !firestore) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [user, firestore]);
+
+  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
+
+  const isAdmin = useMemo(() => userProfile?.roles?.includes('admin'), [userProfile]);
+  const displayName = useMemo(() => userProfile?.displayName || user?.displayName || 'Usuário', [userProfile, user]);
+  const fallback = useMemo(() => displayName?.charAt(0).toUpperCase() || 'U', [displayName]);
 
   const handleLogout = async () => {
     if (!auth) return;
@@ -56,21 +78,30 @@ export function DashboardHeader() {
             className="overflow-hidden rounded-full"
           >
             <Avatar className="h-8 w-8">
-              {userAvatar && (
+              {user?.photoURL ? (
+                <AvatarImage
+                  src={user.photoURL}
+                  alt={displayName}
+                />
+              ) : userAvatar && (
                 <AvatarImage
                   src={userAvatar.imageUrl}
                   alt={userAvatar.description}
                   data-ai-hint={userAvatar.imageHint}
                 />
               )}
-              <AvatarFallback>GP</AvatarFallback>
+              <AvatarFallback>{fallback}</AvatarFallback>
             </Avatar>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuLabel>Gestor Público</DropdownMenuLabel>
+          <DropdownMenuLabel>{displayName}</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem>Configurações</DropdownMenuItem>
+          {isAdmin && (
+             <DropdownMenuItem asChild>
+                <Link href="/dashboard/users">Configurações</Link>
+             </DropdownMenuItem>
+          )}
           <DropdownMenuItem>Suporte</DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleLogout}>Sair</DropdownMenuItem>
