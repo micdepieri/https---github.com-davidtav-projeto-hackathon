@@ -22,7 +22,25 @@ import {
 import { z } from 'zod';
 import { addDoc, collection, getDocs, writeBatch, doc, updateDoc, setDoc, getDoc, serverTimestamp, query, where } from 'firebase/firestore';
 import { getFirestore } from 'firebase/firestore';
-import { initializeFirebase } from '@/firebase';
+import { initializeApp, getApps, getApp, type FirebaseOptions } from 'firebase/app';
+
+
+// Firebase Admin Initialization for Server Actions
+const firebaseConfig: FirebaseOptions = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+};
+
+function getFirestoreInstance() {
+    if (getApps().length === 0) {
+        initializeApp(firebaseConfig);
+    }
+    return getFirestore(getApp());
+}
 
 
 const diagnoseSchema = z.object({
@@ -131,7 +149,7 @@ export async function addCity(
   }
 
   try {
-    const { firestore } = initializeFirebase();
+    const firestore = getFirestoreInstance();
     await addDoc(collection(firestore, 'cities'), {
       name: parsed.data.cityName,
     });
@@ -155,7 +173,7 @@ const initialCities = [
 
 export async function seedInitialData(): Promise<{ success: boolean, error?: string, message?: string }> {
     try {
-        const { firestore } = initializeFirebase();
+        const firestore = getFirestoreInstance();
         
         // Seed cities
         const citiesRef = collection(firestore, 'cities');
@@ -215,7 +233,7 @@ export async function getUsers(): Promise<{
   error?: string;
 }> {
   try {
-    const { firestore } = initializeFirebase();
+    const firestore = getFirestoreInstance();
     const usersCollection = collection(firestore, 'users');
     const snapshot = await getDocs(usersCollection);
     const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -263,7 +281,7 @@ export async function updateUser(formData: FormData): Promise<{
 
 
   try {
-    const { firestore } = initializeFirebase();
+    const firestore = getFirestoreInstance();
     const userRef = doc(firestore, 'users', userId);
     
     await updateDoc(userRef, {
@@ -278,3 +296,5 @@ export async function updateUser(formData: FormData): Promise<{
     return { success: false, error: e.message || 'Falha ao atualizar o usuário.' };
   }
 }
+
+    
