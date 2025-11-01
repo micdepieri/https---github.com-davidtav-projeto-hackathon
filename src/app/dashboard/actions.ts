@@ -1,4 +1,3 @@
-
 'use server';
 
 import {
@@ -16,31 +15,17 @@ import {
   type GenerateClimatePlanInput,
   type GenerateClimatePlanOutput,
 } from '@/ai/flows/generate-climate-plan';
+import {
+    getUrbanHeatIslandData,
+} from '@/ai/flows/get-urban-heat-island-data';
 import { z } from 'zod';
 
-// Helper to convert file to data URI
-async function fileToDataURI(file: File): Promise<string> {
-  const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
-  return `data:${file.type};base64,${buffer.toString('base64')}`;
-}
 
 const diagnoseSchema = z.object({
   municipalityDescription: z
     .string()
     .min(1, 'A descrição do município é obrigatória.'),
-  ndviData: z
-    .instanceof(File)
-    .refine((file) => file.size > 0, 'O arquivo de dados NDVI é obrigatório.'),
-  lstData: z
-    .instanceof(File)
-    .refine((file) => file.size > 0, 'O arquivo de dados LST é obrigatório.'),
-  populationDensityData: z
-    .instanceof(File)
-    .refine((file) => file.size > 0, 'O arquivo de dados de densidade populacional é obrigatório.'),
-  infrastructureData: z
-    .instanceof(File)
-    .refine((file) => file.size > 0, 'O arquivo de dados de infraestrutura é obrigatório.'),
+  municipalityName: z.string().min(1, 'O nome do município é obrigatório.'),
 });
 
 export async function runDiagnostics(
@@ -52,10 +37,7 @@ export async function runDiagnostics(
 }> {
   const parsed = diagnoseSchema.safeParse({
     municipalityDescription: formData.get('municipalityDescription'),
-    ndviData: formData.get('ndviData'),
-    lstData: formData.get('lstData'),
-    populationDensityData: formData.get('populationDensityData'),
-    infrastructureData: formData.get('infrastructureData'),
+    municipalityName: formData.get('municipalityName'),
   });
 
   if (!parsed.success) {
@@ -66,17 +48,19 @@ export async function runDiagnostics(
   }
 
   try {
-    const input: DiagnoseUrbanHeatIslandsInput = {
+    // Step 1: Get data from (the fake) Earth Engine flow
+    const earthEngineData = await getUrbanHeatIslandData({ municipalityName: parsed.data.municipalityName });
+
+    // Step 2: Pass the data to the diagnostics flow
+    const diagnosticsInput: DiagnoseUrbanHeatIslandsInput = {
       municipalityDescription: parsed.data.municipalityDescription,
-      ndviDataUri: await fileToDataURI(parsed.data.ndviData),
-      lstDataUri: await fileToDataURI(parsed.data.lstData),
-      populationDensityData: await fileToDataURI(
-        parsed.data.populationDensityData
-      ),
-      infrastructureData: await fileToDataURI(parsed.data.infrastructureData),
+      ndviDataUri: earthEngineData.ndviDataUri,
+      lstDataUri: earthEngineData.lstDataUri,
+      populationDensityData: earthEngineData.populationDensityData,
+      infrastructureData: earthEngineData.infrastructureData,
     };
 
-    const result = await diagnoseUrbanHeatIslands(input);
+    const result = await diagnoseUrbanHeatIslands(diagnosticsInput);
     return { success: true, data: result };
   } catch (error) {
     console.error(error);

@@ -14,30 +14,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Upload } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import MapPlaceholder from '@/components/map-placeholder';
 
 const formSchema = z.object({
+  municipalityName: z.string().min(3, "Por favor, insira o nome do município."),
   municipalityDescription: z.string().min(10, "Por favor, forneça uma descrição mais detalhada."),
-  ndviData: typeof window === 'undefined' ? z.any() : z.instanceof(FileList).refine(files => files.length > 0, "O arquivo de dados NDVI é obrigatório."),
-  lstData: typeof window === 'undefined' ? z.any() : z.instanceof(FileList).refine(files => files.length > 0, "O arquivo de dados LST é obrigatório."),
-  populationDensityData: typeof window === 'undefined' ? z.any() : z.instanceof(FileList).refine(files => files.length > 0, "O arquivo de dados de densidade populacional é obrigatório."),
-  infrastructureData: typeof window === 'undefined' ? z.any() : z.instanceof(FileList).refine(files => files.length > 0, "O arquivo de dados de infraestrutura é obrigatório."),
 });
 
 type FormValues = z.infer<typeof formSchema>;
-
-const FileInput = ({ label, name, register, errors }: { label: string; name: keyof FormValues; register: any; errors: any }) => (
-    <div className="grid gap-2">
-        <Label htmlFor={name}>{label}</Label>
-        <div className="relative">
-            <Upload className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input id={name} type="file" className="pl-10" {...register(name)} />
-        </div>
-        {errors[name] && <p className="text-sm text-destructive">{errors[name].message}</p>}
-    </div>
-);
-
 
 export default function DiagnosticsPage() {
     const [isLoading, setIsLoading] = useState(false);
@@ -47,6 +32,7 @@ export default function DiagnosticsPage() {
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
         defaultValues: {
+            municipalityName: "",
             municipalityDescription: "",
         }
     });
@@ -56,11 +42,8 @@ export default function DiagnosticsPage() {
         setResults(null);
         
         const formData = new FormData();
+        formData.append('municipalityName', data.municipalityName);
         formData.append('municipalityDescription', data.municipalityDescription);
-        formData.append('ndviData', data.ndviData[0]);
-        formData.append('lstData', data.lstData[0]);
-        formData.append('populationDensityData', data.populationDensityData[0]);
-        formData.append('infrastructureData', data.infrastructureData[0]);
 
         const response = await runDiagnostics(formData);
 
@@ -83,19 +66,20 @@ export default function DiagnosticsPage() {
                 <Card>
                     <CardHeader>
                         <CardTitle>Diagnóstico Automatizado</CardTitle>
-                        <CardDescription>Carregue dados geoespaciais para identificar ilhas de calor urbanas e zonas prioritárias para intervenção verde.</CardDescription>
+                        <CardDescription>Insira o município para identificar ilhas de calor e zonas prioritárias para intervenção verde usando dados do Google Earth Engine.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-6">
                             <div className="grid gap-2">
+                                <Label htmlFor="municipalityName">Nome do Município</Label>
+                                <Input id="municipalityName" {...form.register('municipalityName')} placeholder="Ex: Juquitiba" />
+                                {form.formState.errors.municipalityName && <p className="text-sm text-destructive">{form.formState.errors.municipalityName.message}</p>}
+                            </div>
+                            <div className="grid gap-2">
                                 <Label htmlFor="municipalityDescription">Descrição do Município</Label>
-                                <Textarea id="municipalityDescription" {...form.register('municipalityDescription')} placeholder="Ex: Juquitiba/SP, uma cidade pequena com Mata Atlântica no entorno..." />
+                                <Textarea id="municipalityDescription" {...form.register('municipalityDescription')} placeholder="Ex: Uma cidade pequena com Mata Atlântica no entorno e área urbana em crescimento..." />
                                 {form.formState.errors.municipalityDescription && <p className="text-sm text-destructive">{form.formState.errors.municipalityDescription.message}</p>}
                             </div>
-                            <FileInput label="Cobertura Vegetal (NDVI)" name="ndviData" register={form.register} errors={form.formState.errors} />
-                            <FileInput label="Temperatura da Sup. (LST)" name="lstData" register={form.register} errors={form.formState.errors} />
-                            <FileInput label="Densidade Populacional" name="populationDensityData" register={form.register} errors={form.formState.errors} />
-                            <FileInput label="Infraestrutura Crítica" name="infrastructureData" register={form.register} errors={form.formState.errors} />
                             
                             <Button type="submit" disabled={isLoading}>
                                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -110,7 +94,7 @@ export default function DiagnosticsPage() {
                     <Card className="flex items-center justify-center p-8 min-h-[400px]">
                         <div className="flex flex-col items-center gap-4">
                             <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                            <p className="text-muted-foreground">Analisando dados geoespaciais... Isso pode levar um momento.</p>
+                            <p className="text-muted-foreground">Analisando dados... Isso pode levar um momento.</p>
                         </div>
                     </Card>
                 )}
