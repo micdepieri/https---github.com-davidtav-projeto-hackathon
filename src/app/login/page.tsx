@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Leaf, Loader2 } from 'lucide-react';
 import { useAuth, useFirestore, useUser, useCollection } from '@/firebase';
-import { GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, type User as FirebaseUser } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp, collection, query } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useForm, Controller } from 'react-hook-form';
@@ -40,7 +40,7 @@ const signUpSchema = z.object({
   displayName: z.string().min(3, 'O nome deve ter pelo menos 3 caracteres.'),
   email: z.string().email('E-mail inválido.'),
   password: z.string().min(6, 'A senha deve ter pelo menos 6 caracteres.'),
-  cityId: z.string().min(1, 'Por favor, selecione uma cidade.'),
+  cityId: z.string().optional(),
 });
 type SignUpFormValues = z.infer<typeof signUpSchema>;
 
@@ -66,9 +66,6 @@ export default function LoginPage() {
   const { data: cities, loading: citiesLoading } = useCollection<City>(citiesQuery);
 
   const handleSeed = useCallback(async () => {
-    // This function will now only run if you explicitly call it,
-    // for example from a button in an admin panel.
-    // It is no longer called automatically on page load.
     if (!hasSeeded) {
       setHasSeeded(true);
       console.log('Seeding initial capitals...');
@@ -78,19 +75,20 @@ export default function LoginPage() {
         toast({ title: 'Sucesso', description: 'Cidades iniciais carregadas.' });
       } else {
         console.error('Seeding failed:', response.error);
-        toast({
-          variant: 'destructive',
-          title: 'Erro ao carregar dados iniciais',
-          description: response.error,
-        });
+        if (response.error !== 'Cities collection already populated.') {
+           toast({
+            variant: 'destructive',
+            title: 'Erro ao carregar dados iniciais',
+            description: response.error,
+          });
+        }
       }
     }
   }, [hasSeeded, toast]);
 
   useEffect(() => {
-    if (process.env.NODE_ENV === 'development' && cities && cities.length === 0 && !hasSeeded) {
-       // You could trigger seeding here if desired for development environments
-       // handleSeed();
+    if (cities && cities.length === 0 && !hasSeeded) {
+       handleSeed();
     }
   }, [cities, hasSeeded, handleSeed]);
 
@@ -104,12 +102,13 @@ export default function LoginPage() {
     }
   }, [user, loading, router]);
 
-  const handleUserCreation = async (user: any, cityId?: string) => {
+  const handleUserCreation = async (user: FirebaseUser, cityId?: string) => {
     if (!firestore || !user) return;
     const userRef = doc(firestore, 'users', user.uid);
     const userDoc = await getDoc(userRef);
 
     if (!userDoc.exists()) {
+      const roles = cityId ? ['gestor_publico'] : ['admin'];
       await setDoc(userRef, {
         uid: user.uid,
         email: user.email,
@@ -117,7 +116,7 @@ export default function LoginPage() {
         photoURL: user.photoURL,
         createdAt: serverTimestamp(),
         lastLogin: serverTimestamp(),
-        roles: ['admin'],
+        roles: roles,
         cityId: cityId || null,
       }, { merge: true });
       toast({ title: "Bem-vindo!", description: "Sua conta foi criada." });
@@ -133,6 +132,9 @@ export default function LoginPage() {
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
+      // For Google sign-in, we can't ask for a city, so they become admins by default
+      // or we can implement a post-login step to choose a city.
+      // For now, let's make them admins.
       await handleUserCreation(result.user);
     } catch (error: any) {
       toast({ variant: "destructive", title: "Falha na autenticação", description: error.message });
@@ -160,9 +162,12 @@ export default function LoginPage() {
     try {
       const result = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(result.user, { displayName });
-      await result.user.reload();
-      const updatedUser = { ...result.user, displayName };
-      await handleUserCreation(updatedUser, cityId);
+      // reload user to get the updated profile
+      await result.user.reload(); 
+      const updatedUser = auth.currentUser;
+      if(updatedUser) {
+        await handleUserCreation(updatedUser, cityId);
+      }
     } catch (error: any)      {
       toast({ variant: "destructive", title: "Falha no cadastro", description: error.code === 'auth/email-already-in-use' ? 'Este e-mail já está em uso.' : error.message });
     } finally {
@@ -231,14 +236,14 @@ export default function LoginPage() {
                    {signUpForm.formState.errors.password && <p className="text-sm text-destructive">{signUpForm.formState.errors.password.message}</p>}
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="signup-city">Cidade</Label>
+                    <Label htmlFor="signup-city">Cidade (Opcional para Admins)</Label>
                     <Controller
                         name="cityId"
                         control={signUpForm.control}
                         render={({ field }) => (
                             <Select onValueChange={field.onChange} defaultValue={field.value} disabled={citiesLoading}>
                                 <SelectTrigger>
-                                    <SelectValue placeholder="Selecione sua cidade" />
+                                    <SelectValue placeholder="Selecione sua cidade (deixe em branco para admin)" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {citiesLoading ? (

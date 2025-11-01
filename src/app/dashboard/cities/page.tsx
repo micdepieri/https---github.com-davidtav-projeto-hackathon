@@ -1,15 +1,17 @@
 
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from "@/hooks/use-toast";
 import { addCity } from '@/app/dashboard/actions';
-import { useCollection } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
+import { useCollection, useUser, useDoc } from '@/firebase';
+import { collection, query, doc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
+import { useRouter } from 'next/navigation';
+
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,10 +31,39 @@ interface City {
     name: string;
 }
 
+interface UserProfile {
+    roles?: string[];
+}
+
 export default function CitiesPage() {
     const [isLoading, setIsLoading] = useState(false);
     const { toast } = useToast();
     const firestore = useFirestore();
+    const { user, loading: userLoading } = useUser();
+    const router = useRouter();
+
+    const userProfileRef = useMemo(() => {
+        if (!user || !firestore) return null;
+        return doc(firestore, 'users', user.uid);
+    }, [user, firestore]);
+
+    const { data: userProfile, loading: profileLoading } = useDoc<UserProfile>(userProfileRef);
+
+    useEffect(() => {
+        if (!userLoading && !profileLoading) {
+            const isAdmin = userProfile?.roles?.includes('admin');
+            if (!user) {
+                router.push('/login');
+            } else if (!isAdmin) {
+                router.push('/dashboard');
+                toast({
+                    variant: 'destructive',
+                    title: 'Acesso Negado',
+                    description: 'Você não tem permissão para acessar esta página.',
+                });
+            }
+        }
+    }, [user, userProfile, userLoading, profileLoading, router, toast]);
 
     const citiesQuery = useMemo(() => {
         if (!firestore) return null;
@@ -68,6 +99,16 @@ export default function CitiesPage() {
         }
         setIsLoading(false);
     };
+
+    const pageIsLoading = userLoading || profileLoading;
+
+    if (pageIsLoading || !userProfile?.roles?.includes('admin')) {
+        return (
+            <div className="flex h-[calc(100vh-8rem)] w-full items-center justify-center">
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            </div>
+        );
+    }
 
     return (
         <div className="grid flex-1 items-start gap-4 md:gap-8 lg:grid-cols-3 xl:grid-cols-3">

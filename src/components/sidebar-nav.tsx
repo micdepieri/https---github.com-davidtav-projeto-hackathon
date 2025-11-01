@@ -12,17 +12,35 @@ import {
   SidebarMenuButton,
   SidebarFooter,
 } from '@/components/ui/sidebar';
+import { useUser, useDoc, useFirestore } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import { useMemo } from 'react';
 
 const menuItems = [
   { href: '/dashboard', label: 'Diagnóstico', icon: LayoutDashboard },
-  { href: '/dashboard/cities', label: 'Cidades', icon: Building },
+  { href: '/dashboard/cities', label: 'Cidades', icon: Building, adminOnly: true },
   { href: '/dashboard/recommendations', label: 'Recomendações', icon: Map },
   { href: '/dashboard/plan-generator', label: 'Gerador de Planos', icon: FileText },
   { href: '/dashboard/assistant', label: 'Assistente IA', icon: Bot },
 ];
 
+interface UserProfile {
+    roles?: string[];
+}
+
 export function SidebarNav() {
   const pathname = usePathname();
+  const { user } = useUser();
+  const firestore = useFirestore();
+
+  const userProfileRef = useMemo(() => {
+    if (!user || !firestore) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [user, firestore]);
+
+  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
+
+  const isAdmin = userProfile?.roles?.includes('admin');
 
   return (
     <Sidebar>
@@ -34,20 +52,25 @@ export function SidebarNav() {
           </Link>
         </SidebarHeader>
         <SidebarMenu>
-          {menuItems.map((item) => (
-            <SidebarMenuItem key={item.href}>
-              <SidebarMenuButton
-                asChild
-                tooltip={item.label}
-                isActive={pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))}
-              >
-                <Link href={item.href}>
-                  <item.icon />
-                  <span>{item.label}</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
+          {menuItems.map((item) => {
+            if (item.adminOnly && !isAdmin) {
+                return null;
+            }
+            return (
+                <SidebarMenuItem key={item.href}>
+                <SidebarMenuButton
+                    asChild
+                    tooltip={item.label}
+                    isActive={pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))}
+                >
+                    <Link href={item.href}>
+                    <item.icon />
+                    <span>{item.label}</span>
+                    </Link>
+                </SidebarMenuButton>
+                </SidebarMenuItem>
+            )
+          })}
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter>
