@@ -32,7 +32,7 @@ interface City {
   name: string;
 }
 
-function EditUserDialog({ user, cities, onFinished }: { user: UserProfile; cities: City[]; onFinished: () => void }) {
+function EditUserDialog({ user, cities, onFinished }: { user: UserProfile; cities: City[] | null; onFinished: () => void }) {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleFinished = () => {
@@ -57,7 +57,7 @@ function EditUserDialog({ user, cities, onFinished }: { user: UserProfile; citie
   );
 }
 
-function EditUserForm({ user, cities, onFinished }: { user: UserProfile; cities: City[]; onFinished: () => void }) {
+function EditUserForm({ user, cities, onFinished }: { user: UserProfile; cities: City[] | null; onFinished: () => void }) {
   const [displayName, setDisplayName] = useState(user.displayName);
   const [role, setRole] = useState(user.roles?.[0] || 'gestor_publico');
   const [cityId, setCityId] = useState(user.cityId || '');
@@ -117,7 +117,7 @@ function EditUserForm({ user, cities, onFinished }: { user: UserProfile; cities:
           </SelectTrigger>
           <SelectContent>
              <SelectItem value="_none_">Nenhuma</SelectItem>
-            {cities.map((city) => (
+            {cities?.map((city) => (
               <SelectItem key={city.id} value={city.id}>
                 {city.name}
               </SelectItem>
@@ -238,7 +238,7 @@ export default function UsersPage() {
                       <TableCell>{user.createdAt}</TableCell>
                       <TableCell>{user.lastLogin}</TableCell>
                       <TableCell>
-                        {cities && <EditUserDialog user={user} cities={cities} onFinished={onEditFinished} />}
+                        <EditUserDialog user={user} cities={cities} onFinished={onEditFinished} />
                       </TableCell>
                     </TableRow>
                   );
