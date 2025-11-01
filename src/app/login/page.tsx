@@ -1,15 +1,21 @@
 
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Leaf, Loader2 } from 'lucide-react';
 import { useAuth, useFirestore, useUser } from '@/firebase';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 
 function GoogleIcon() {
   return (
@@ -22,12 +28,30 @@ function GoogleIcon() {
   );
 }
 
+const signInSchema = z.object({
+  email: z.string().email('E-mail inválido.'),
+  password: z.string().min(1, 'A senha é obrigatória.'),
+});
+type SignInFormValues = z.infer<typeof signInSchema>;
+
+const signUpSchema = z.object({
+  displayName: z.string().min(3, 'O nome deve ter pelo menos 3 caracteres.'),
+  email: z.string().email('E-mail inválido.'),
+  password: z.string().min(6, 'A senha deve ter pelo menos 6 caracteres.'),
+});
+type SignUpFormValues = z.infer<typeof signUpSchema>;
+
+
 export default function LoginPage() {
   const { user, loading } = useUser();
   const auth = useAuth();
   const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const signInForm = useForm<SignInFormValues>({ resolver: zodResolver(signInSchema) });
+  const signUpForm = useForm<SignUpFormValues>({ resolver: zodResolver(signUpSchema) });
 
   useEffect(() => {
     if (!loading && user) {
@@ -35,51 +59,73 @@ export default function LoginPage() {
     }
   }, [user, loading, router]);
 
-  const handleGoogleSignIn = async () => {
-    if (!auth || !firestore) {
-      toast({
-        variant: "destructive",
-        title: "Firebase not initialized",
-        description: "Please wait a moment and try again.",
-      });
-      return;
-    }
+  const handleUserCreation = async (user: any) => {
+    if (!firestore || !user) return;
+    const userRef = doc(firestore, 'users', user.uid);
+    const userDoc = await getDoc(userRef);
 
+    if (!userDoc.exists()) {
+      await setDoc(userRef, {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        photoURL: user.photoURL,
+        createdAt: serverTimestamp(),
+        lastLogin: serverTimestamp(),
+        roles: ['user'],
+        cities: [],
+      }, { merge: true });
+      toast({ title: "Bem-vindo!", description: "Sua conta foi criada." });
+    } else {
+      await setDoc(userRef, { lastLogin: serverTimestamp() }, { merge: true });
+    }
+    router.push('/dashboard');
+  };
+
+  const handleGoogleSignIn = async () => {
+    if (!auth) return;
+    setIsLoading(true);
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-
-      // Create or update user profile in Firestore
-      const userRef = doc(firestore, 'users', user.uid);
-      const userDoc = await getDoc(userRef);
-
-      if (!userDoc.exists()) {
-        await setDoc(userRef, {
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName,
-          photoURL: user.photoURL,
-          createdAt: serverTimestamp(),
-          lastLogin: serverTimestamp(),
-          roles: ['user'], // Default role
-          cities: [], // No cities assigned initially
-        }, { merge: true });
-        toast({ title: "Welcome!", description: "Your account has been created." });
-      } else {
-        await setDoc(userRef, { lastLogin: serverTimestamp() }, { merge: true });
-      }
-
-      router.push('/dashboard');
+      await handleUserCreation(result.user);
     } catch (error: any) {
-      console.error("Authentication error:", error);
-      toast({
-        variant: "destructive",
-        title: "Authentication Failed",
-        description: error.message || "An error occurred during sign-in.",
-      });
+      toast({ variant: "destructive", title: "Falha na autenticação", description: error.message });
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  const handleEmailSignIn = async ({ email, password }: SignInFormValues) => {
+    if (!auth) return;
+    setIsLoading(true);
+    try {
+      const result = await signInWithEmailAndPassword(auth, email, password);
+      await handleUserCreation(result.user);
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Falha na autenticação", description: error.code === 'auth/invalid-credential' ? 'E-mail ou senha inválidos.' : error.message });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const handleEmailSignUp = async ({ displayName, email, password }: SignUpFormValues) => {
+    if (!auth) return;
+    setIsLoading(true);
+    try {
+      const result = await createUserWithEmailAndPassword(auth, email, password);
+      await updateProfile(result.user, { displayName });
+      // Reload user to get the updated profile
+      await result.user.reload();
+      const updatedUser = { ...result.user, displayName };
+      await handleUserCreation(updatedUser);
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Falha no cadastro", description: error.code === 'auth/email-already-in-use' ? 'Este e-mail já está em uso.' : error.message });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
 
   if (loading || user) {
     return (
@@ -97,15 +143,72 @@ export default function LoginPage() {
             <Leaf className="h-10 w-10 text-primary" />
           </div>
           <CardTitle className="text-2xl">Cool Cities Climate Planner</CardTitle>
-          <CardDescription>Sign in to access your climate planning dashboard.</CardDescription>
+          <CardDescription>Acesse seu painel de planejamento climático.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Button onClick={handleGoogleSignIn} className="w-full">
-            <GoogleIcon />
-            Sign in with Google
-          </Button>
+          <Tabs defaultValue="signin">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="signin">Entrar</TabsTrigger>
+              <TabsTrigger value="signup">Criar Conta</TabsTrigger>
+            </TabsList>
+            <TabsContent value="signin">
+              <form onSubmit={signInForm.handleSubmit(handleEmailSignIn)} className="space-y-4 pt-4">
+                <div className="space-y-2">
+                  <Label htmlFor="signin-email">E-mail</Label>
+                  <Input id="signin-email" type="email" placeholder="nome@exemplo.com" {...signInForm.register('email')} />
+                  {signInForm.formState.errors.email && <p className="text-sm text-destructive">{signInForm.formState.errors.email.message}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signin-password">Senha</Label>
+                  <Input id="signin-password" type="password" {...signInForm.register('password')} />
+                  {signInForm.formState.errors.password && <p className="text-sm text-destructive">{signInForm.formState.errors.password.message}</p>}
+                </div>
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Entrar
+                </Button>
+              </form>
+            </TabsContent>
+            <TabsContent value="signup">
+              <form onSubmit={signUpForm.handleSubmit(handleEmailSignUp)} className="space-y-4 pt-4">
+                 <div className="space-y-2">
+                  <Label htmlFor="signup-name">Nome</Label>
+                  <Input id="signup-name" placeholder="Seu Nome" {...signUpForm.register('displayName')} />
+                  {signUpForm.formState.errors.displayName && <p className="text-sm text-destructive">{signUpForm.formState.errors.displayName.message}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-email">E-mail</Label>
+                  <Input id="signup-email" type="email" placeholder="nome@exemplo.com" {...signUpForm.register('email')} />
+                  {signUpForm.formState.errors.email && <p className="text-sm text-destructive">{signUpForm.formState.errors.email.message}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-password">Senha</Label>
+                  <Input id="signup-password" type="password" {...signUpForm.register('password')} />
+                   {signUpForm.formState.errors.password && <p className="text-sm text-destructive">{signUpForm.formState.errors.password.message}</p>}
+                </div>
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Criar Conta
+                </Button>
+              </form>
+            </TabsContent>
+             <div className="relative mt-6">
+                <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">Ou continue com</span>
+                </div>
+            </div>
+             <Button onClick={handleGoogleSignIn} variant="outline" className="w-full mt-6" disabled={isLoading}>
+                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon />}
+                Entrar com Google
+            </Button>
+          </Tabs>
         </CardContent>
       </Card>
     </main>
   );
 }
+
+    
