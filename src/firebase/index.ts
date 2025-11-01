@@ -2,8 +2,8 @@
 'use client';
 
 import { initializeApp, getApp, getApps, type FirebaseOptions } from 'firebase/app';
-import { getAuth, connectAuthEmulator } from 'firebase/auth';
-import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
 
 // Does not need to be secret. It's just a set of client-side configurations.
 const firebaseConfig: FirebaseOptions = {
@@ -27,15 +27,6 @@ function initializeFirebase() {
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const firestore = getFirestore(app);
-
-  // Next.js manages its own server processes, so we need to check if we're in the browser
-  // to connect to the emulators.
-  if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
-    // Point to the emulators running on your local machine.
-    // Ensure the ports match the ones in your firebase.json.
-    connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
-    connectFirestoreEmulator(firestore, '127.0.0.1', 8080);
-  }
 
   return { app, auth, firestore };
 }
