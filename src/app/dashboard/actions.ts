@@ -19,6 +19,9 @@ import {
 import {
     getUrbanHeatIslandData,
 } from '@/ai/flows/get-urban-heat-island-data';
+import {
+    getCityInfo,
+} from '@/ai/flows/get-city-info-flow';
 import { z } from 'zod';
 import { addDoc, collection, getDocs, writeBatch, doc, updateDoc, setDoc, getDoc, serverTimestamp, query, where, Timestamp } from 'firebase/firestore';
 import { getFirestore } from 'firebase/firestore';
@@ -293,4 +296,17 @@ export async function updateUser(formData: FormData): Promise<{
     console.error('Failed to update user:', e);
     return { success: false, error: e.message || 'Falha ao atualizar o usuário.' };
   }
+}
+
+export async function generateDescriptionForCity(cityName: string): Promise<{ success: boolean; description?: string; error?: string; }> {
+    if (!cityName) {
+        return { success: false, error: "Nome da cidade é obrigatório." };
+    }
+    try {
+        const result = await getCityInfo({ municipalityName: cityName });
+        return { success: true, description: result.description };
+    } catch (e: any) {
+        console.error('Failed to generate description:', e);
+        return { success: false, error: e.message || 'Falha ao gerar a descrição da cidade.' };
+    }
 }

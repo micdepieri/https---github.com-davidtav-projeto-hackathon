@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from "@/hooks/use-toast";
-import { runDiagnostics } from '@/app/dashboard/actions';
+import { runDiagnostics, generateDescriptionForCity } from '@/app/dashboard/actions';
 import type { DiagnoseUrbanHeatIslandsOutput, DiagnoseUrbanHeatIslandsInput } from '@/ai/flows/diagnose-urban-heat-islands';
 import { useUser, useDoc } from '@/firebase';
 import { doc } from 'firebase/firestore';
@@ -19,7 +19,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2 } from 'lucide-react';
+import { Loader2, Sparkles } from 'lucide-react';
 import MapPlaceholder from '@/components/map-placeholder';
 
 const formSchema = z.object({
@@ -46,6 +46,7 @@ interface City {
 
 export default function DiagnosticsPage() {
     const [isLoading, setIsLoading] = useState(false);
+    const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
     const [results, setResults] = useState<ResultsState>(null);
     const { toast } = useToast();
     const { user } = useUser();
@@ -69,6 +70,30 @@ export default function DiagnosticsPage() {
             municipalityDescription: "",
         }
     });
+
+    const handleGenerateDescription = async () => {
+        if (!city?.name) {
+            toast({
+                variant: "destructive",
+                title: "Cidade não encontrada",
+                description: "O seu usuário não está vinculado a uma cidade.",
+            });
+            return;
+        }
+        setIsGeneratingDesc(true);
+        const response = await generateDescriptionForCity(city.name);
+        if (response.success && response.description) {
+            form.setValue('municipalityDescription', response.description);
+            toast({ title: "Descrição Gerada", description: "A descrição do município foi preenchida." });
+        } else {
+            toast({
+                variant: "destructive",
+                title: "Ocorreu um Erro",
+                description: response.error || "Falha ao gerar a descrição.",
+            });
+        }
+        setIsGeneratingDesc(false);
+    };
 
     const onSubmit = async (data: FormValues) => {
         if (!city?.name) {
@@ -124,13 +149,19 @@ export default function DiagnosticsPage() {
                     <CardContent>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-6">
                             <div className="grid gap-2">
-                                <Label htmlFor="municipalityDescription">Descrição do Município</Label>
+                                <div className="flex justify-between items-center">
+                                    <Label htmlFor="municipalityDescription">Descrição do Município</Label>
+                                    <Button type="button" variant="outline" size="sm" onClick={handleGenerateDescription} disabled={isGeneratingDesc || isLoadingData || !city}>
+                                        {isGeneratingDesc ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                                        Gerar com IA
+                                    </Button>
+                                </div>
                                 <Textarea id="municipalityDescription" {...form.register('municipalityDescription')} placeholder="Ex: Uma cidade pequena com Mata Atlântica no entorno e área urbana em crescimento..." />
                                 {form.formState.errors.municipalityDescription && <p className="text-sm text-destructive">{form.formState.errors.municipalityDescription.message}</p>}
                             </div>
                             
                             <Button type="submit" disabled={isLoading || isLoadingData || !city}>
-                                {(isLoading || isLoadingData) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                {(isLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                 {isLoading ? "Analisando..." : "Executar Diagnóstico"}
                             </Button>
                         </form>
