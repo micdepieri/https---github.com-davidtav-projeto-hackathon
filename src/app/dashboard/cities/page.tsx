@@ -51,10 +51,12 @@ export default function CitiesPage() {
 
     useEffect(() => {
         if (!userLoading && !profileLoading) {
-            const isAdmin = userProfile?.roles?.includes('admin');
             if (!user) {
                 router.push('/login');
-            } else if (!isAdmin) {
+                return;
+            }
+            const isAdmin = userProfile?.roles?.includes('admin');
+            if (!isAdmin) {
                 router.push('/dashboard');
                 toast({
                     variant: 'destructive',
@@ -101,8 +103,9 @@ export default function CitiesPage() {
     };
 
     const pageIsLoading = userLoading || profileLoading;
+    const isAdmin = userProfile?.roles?.includes('admin');
 
-    if (pageIsLoading || !userProfile?.roles?.includes('admin')) {
+    if (pageIsLoading || !isAdmin) {
         return (
             <div className="flex h-[calc(100vh-8rem)] w-full items-center justify-center">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />

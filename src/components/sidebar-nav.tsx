@@ -40,7 +40,7 @@ export function SidebarNav() {
 
   const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
 
-  const isAdmin = userProfile?.roles?.includes('admin');
+  const isAdmin = useMemo(() => userProfile?.roles?.includes('admin'), [userProfile]);
 
   return (
     <Sidebar>
