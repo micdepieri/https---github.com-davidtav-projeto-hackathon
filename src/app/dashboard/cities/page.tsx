@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from "@/hooks/use-toast";
-import { addCity } from '@/app/dashboard/actions';
+import { addCity, getCityByCep } from '@/app/dashboard/actions';
 import { useCollection, useUser, useDoc } from '@/firebase';
 import { collection, query, doc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
@@ -18,13 +18,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2 } from 'lucide-react';
+import { Loader2, Search } from 'lucide-react';
 
-const formSchema = z.object({
-  cityName: z.string().min(3, "Por favor, insira o nome da cidade."),
+const cepFormSchema = z.object({
+  cep: z.string().regex(/^\d{8}$/, "Por favor, insira um CEP válido com 8 dígitos."),
 });
 
-type FormValues = z.infer<typeof formSchema>;
+type CepFormValues = z.infer<typeof cepFormSchema>;
 
 interface City {
     id: string;
@@ -35,8 +35,16 @@ interface UserProfile {
     roles?: string[];
 }
 
+interface ViaCepResponse {
+    localidade: string;
+    uf: string;
+    erro?: boolean;
+}
+
 export default function CitiesPage() {
-    const [isLoading, setIsLoading] = useState(false);
+    const [isSearchingCep, setIsSearchingCep] = useState(false);
+    const [isAddingCity, setIsAddingCity] = useState(false);
+    const [foundCity, setFoundCity] = useState<ViaCepResponse | null>(null);
     const { toast } = useToast();
     const firestore = useFirestore();
     const { user, loading: userLoading } = useUser();
@@ -74,24 +82,44 @@ export default function CitiesPage() {
     
     const { data: cities, loading: citiesLoading } = useCollection<City>(citiesQuery);
 
-    const form = useForm<FormValues>({
-        resolver: zodResolver(formSchema),
+    const cepForm = useForm<CepFormValues>({
+        resolver: zodResolver(cepFormSchema),
         defaultValues: {
-            cityName: "",
+            cep: "",
         }
     });
 
-    const onSubmit = async (data: FormValues) => {
-        setIsLoading(true);
+    const handleSearchCep = async ({ cep }: CepFormValues) => {
+        setIsSearchingCep(true);
+        setFoundCity(null);
+        const response = await getCityByCep(cep);
+        if (response.success && response.data) {
+            if (response.data.erro) {
+                toast({ variant: 'destructive', title: 'CEP não encontrado' });
+            } else {
+                setFoundCity(response.data);
+            }
+        } else {
+            toast({ variant: 'destructive', title: 'Erro ao buscar CEP', description: response.error });
+        }
+        setIsSearchingCep(false);
+    };
+
+    const handleAddCity = async () => {
+        if (!foundCity) return;
+        
+        setIsAddingCity(true);
+        const cityName = `${foundCity.localidade} - ${foundCity.uf}`;
         
         const formData = new FormData();
-        formData.append('cityName', data.cityName);
+        formData.append('cityName', cityName);
 
         const response = await addCity(formData);
 
         if (response.success) {
-            toast({ title: "Cidade Adicionada", description: "A nova cidade foi adicionada com sucesso." });
-            form.reset();
+            toast({ title: "Cidade Adicionada", description: `${cityName} foi adicionada com sucesso.` });
+            cepForm.reset();
+            setFoundCity(null);
         } else {
             toast({
                 variant: "destructive",
@@ -99,7 +127,7 @@ export default function CitiesPage() {
                 description: response.error || "Falha ao adicionar a cidade.",
             });
         }
-        setIsLoading(false);
+        setIsAddingCity(false);
     };
 
     const pageIsLoading = userLoading || profileLoading;
@@ -119,21 +147,31 @@ export default function CitiesPage() {
                 <Card>
                     <CardHeader>
                         <CardTitle>Adicionar Nova Cidade</CardTitle>
-                        <CardDescription>Cadastre uma nova cidade no sistema.</CardDescription>
+                        <CardDescription>Cadastre uma nova cidade no sistema usando o CEP.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-6">
+                        <form onSubmit={cepForm.handleSubmit(handleSearchCep)} className="grid gap-4">
                             <div className="grid gap-2">
-                                <Label htmlFor="cityName">Nome da Cidade</Label>
-                                <Input id="cityName" {...form.register('cityName')} placeholder="Ex: São Paulo" />
-                                {form.formState.errors.cityName && <p className="text-sm text-destructive">{form.formState.errors.cityName.message}</p>}
+                                <Label htmlFor="cep">CEP</Label>
+                                <div className="flex gap-2">
+                                <Input id="cep" {...cepForm.register('cep')} placeholder="Ex: 01001000" />
+                                <Button type="submit" size="icon" variant="outline" disabled={isSearchingCep}>
+                                    {isSearchingCep ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                                </Button>
+                                </div>
+                                {cepForm.formState.errors.cep && <p className="text-sm text-destructive">{cepForm.formState.errors.cep.message}</p>}
                             </div>
-                            
-                            <Button type="submit" disabled={isLoading}>
-                                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                {isLoading ? "Adicionando..." : "Adicionar Cidade"}
-                            </Button>
                         </form>
+                        {foundCity && (
+                             <div className="mt-4 grid gap-4 rounded-md border bg-muted/50 p-4">
+                                <p className="text-sm">Cidade encontrada:</p>
+                                <p className="text-lg font-semibold">{foundCity.localidade} - {foundCity.uf}</p>
+                                <Button onClick={handleAddCity} disabled={isAddingCity}>
+                                    {isAddingCity && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Adicionar Cidade
+                                </Button>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </div>

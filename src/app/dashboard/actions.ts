@@ -178,3 +178,17 @@ export async function seedInitialCities(): Promise<{ success: boolean, error?: s
         return { success: false, error: e.message || 'Failed to seed initial cities.' };
     }
 }
+
+export async function getCityByCep(cep: string): Promise<{ success: boolean; data?: any; error?: string; }> {
+    try {
+        const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+        if (!response.ok) {
+            throw new Error('Falha ao buscar o CEP. Verifique o número e tente novamente.');
+        }
+        const data = await response.json();
+        return { success: true, data };
+    } catch (e: any) {
+        console.error('ViaCEP API error:', e);
+        return { success: false, error: e.message || 'Ocorreu um erro ao consultar a API ViaCEP.' };
+    }
+}
