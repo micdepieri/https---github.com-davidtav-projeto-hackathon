@@ -72,7 +72,7 @@ function EditUserForm({ user, cities, onFinished }: { user: UserProfile; cities:
     formData.append('userId', user.id);
     formData.append('displayName', displayName);
     formData.append('role', role);
-    if (cityId) {
+    if (cityId && cityId !== '_none_') {
         formData.append('cityId', cityId);
     }
     
@@ -116,7 +116,7 @@ function EditUserForm({ user, cities, onFinished }: { user: UserProfile; cities:
             <SelectValue placeholder="Selecione uma cidade" />
           </SelectTrigger>
           <SelectContent>
-             <SelectItem value="">Nenhuma</SelectItem>
+             <SelectItem value="_none_">Nenhuma</SelectItem>
             {cities.map((city) => (
               <SelectItem key={city.id} value={city.id}>
                 {city.name}
