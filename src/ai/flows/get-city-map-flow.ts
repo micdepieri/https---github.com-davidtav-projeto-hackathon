@@ -94,7 +94,7 @@ async function fetchImageAndConvertToDataUri(url: string, imageName: string): Pr
 }
 
 
-export async function getCityMap(input: GetCityMapInput): Promise<GetCityMapOutput> {
+async function getCityMapInternal(input: GetCityMapInput): Promise<GetCityMapOutput> {
     console.log(`Fetching satellite map for: ${input.municipalityName}`);
     
     await initializeEE();
@@ -137,5 +137,9 @@ const getCityMapFlow = ai.defineFlow(
     inputSchema: GetCityMapInputSchema,
     outputSchema: GetCityMapOutputSchema,
   },
-  getCityMap
+  getCityMapInternal
 );
+
+export async function getCityMap(input: GetCityMapInput): Promise<GetCityMapOutput> {
+  return getCityMapFlow(input);
+}
