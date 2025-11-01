@@ -30,6 +30,31 @@ interface City {
   name: string;
 }
 
+function EditUserDialog({ user, cities, onFinished }: { user: UserProfile; cities: City[]; onFinished: () => void }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const handleFinished = () => {
+    onFinished();
+    setIsOpen(false);
+  };
+  
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="icon">
+          <Edit className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Editar Usuário</DialogTitle>
+        </DialogHeader>
+        <EditUserForm user={user} cities={cities} onFinished={handleFinished} />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function EditUserForm({ user, cities, onFinished }: { user: UserProfile; cities: City[]; onFinished: () => void }) {
   const [displayName, setDisplayName] = useState(user.displayName);
   const [role, setRole] = useState(user.roles?.[0] || 'gestor_publico');
@@ -109,7 +134,6 @@ function EditUserForm({ user, cities, onFinished }: { user: UserProfile; cities:
 export default function UsersPage() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   
   const { user: currentUser, loading: userLoading } = useUser();
   const firestore = useFirestore();
@@ -160,7 +184,6 @@ export default function UsersPage() {
   }, [currentUser, userProfile, userLoading, profileLoading, router, toast]);
 
   const onEditFinished = () => {
-    setIsEditDialogOpen(false);
     fetchUsers(); // Refresh user list
   }
   
@@ -188,7 +211,7 @@ export default function UsersPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {isLoadingUsers ? (
+          {isLoadingUsers || citiesLoading ? (
             <div className="flex items-center justify-center p-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
@@ -213,19 +236,7 @@ export default function UsersPage() {
                       <TableCell className="capitalize">{user.roles?.join(', ').replace('_', ' ')}</TableCell>
                       <TableCell>{userCity?.name || 'N/A'}</TableCell>
                       <TableCell>
-                        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                          <DialogTrigger asChild>
-                            <Button variant="outline" size="icon">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="sm:max-w-[425px]">
-                            <DialogHeader>
-                              <DialogTitle>Editar Usuário</DialogTitle>
-                            </DialogHeader>
-                            {!citiesLoading && cities && <EditUserForm user={user} cities={cities} onFinished={onEditFinished} />}
-                          </DialogContent>
-                        </Dialog>
+                        {cities && <EditUserDialog user={user} cities={cities} onFinished={onEditFinished} />}
                       </TableCell>
                     </TableRow>
                   );
