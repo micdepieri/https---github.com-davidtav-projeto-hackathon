@@ -84,7 +84,9 @@ O plano de cobrança é baseado em **tamanho da área analisada**, adaptando-se 
 
 **Equipe Cool Cities** — Hackathon Devs de Impacto 2025  
 - [Michael Pieri](https://github.com/) — Desenvolvimento e Gestão Pública  
-- 
+- [David Tavares](https://github.com/) — Desenvolvimento.
+- Luan Sanches. — Gestão Financeira
+- João Madureira.— Gestão de Negócios 
 
 ---
 
